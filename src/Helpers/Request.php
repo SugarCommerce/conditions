@@ -16,6 +16,7 @@ declare( strict_types=1 );
 namespace SugarCommerce\Conditions\Helpers;
 
 use SugarCommerce\Conditions\Conditions;
+use SugarCommerce\Network\IP;
 
 /**
  * Class Request

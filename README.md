@@ -11,11 +11,15 @@ fraud. Hard-coding them means a release every time one changes; a settings
 field means parsing whatever the owner typed.
 
 This gives the owner a builder — pick a condition, an operator and a value,
-and group them with any/all — and gives you one call that answers. It
-depends on nothing but WordPress — no other SugarCommerce package — so any
-plugin can carry it: conditions about your shop, your customers or a paid
-lookup service are yours to add. An IP rule reads an address, `/24`,
-`203.0.113.*`, `2001:db8:*` or `a-b` with its own `Helpers\IP`.
+and group them with any/all — and gives you one call that answers.
+Conditions about your shop, your customers or a paid lookup service are
+yours to add.
+
+It leans on two SugarCommerce packages rather than carrying copies:
+sugarcommerce/network reads the patterns in an IP rule (its `Range`: an
+address, `/24`, `203.0.113.*`, `2001:db8:*`, or `a-b`), and
+sugarcommerce/plugin's `Assets` finds where the builder's scripts are
+served from. Both are Strauss-safe, so any plugin can still carry it.
 
 ## Features
 
@@ -266,8 +270,9 @@ built-in id outside the twelve above are unchanged.
 | `AcceptLanguage::get_common_languages()` | `Options\Request::get_languages()` |
 | the `conditionsData` script global | `window.sugarConditions[ $set ]` |
 | REST `conditions/v1` | `Conditions::rest_namespace()` |
-| `IP::is_match( $ip, $patterns )` (wp-ip-utils) | `Helpers\IP::matches_any( $patterns, $ip )` |
+| `IP::is_match()` (wp-ip-utils) | `SugarCommerce\Network\Range::contains_any( $patterns, $ip )` -- the package's own `Helpers\IP` copy is gone |
 | `Email::matches_any()` (wp-email-utils) | `Helpers\Email::matches_any()` |
+| the assets folder's URL, worked out here | `SugarCommerce\Plugin\Assets::locate()`; `Admin\Assets::url()` and the `…_assets_url` filter are unchanged |
 
 What is no longer built in, and where it went:
 
@@ -291,6 +296,7 @@ Answers that changed:
 
 * PHP 8.3 or later
 * WordPress 7.1 or later
+* sugarcommerce/network and sugarcommerce/plugin
 
 ## License
 
