@@ -12,7 +12,7 @@ read back what WordPress was asked to do.
   `CoreTest` covers the jobs handed to core: the trash notice
   (`wp_admin_notice()`, copied verbatim into `bootstrap.php`), the REST
   check and reading a list.
-- **Helpers** -- IP patterns (network's `Range`, through the comparator and
+- **Helpers** -- IP patterns (`Helpers\IP`, through the comparator and
   the sanitiser), email patterns, the request (and what it refuses to
   believe), the velocity counts, a user's capabilities as `user_can()` answers
   them, and a post's age in the site's timezone.

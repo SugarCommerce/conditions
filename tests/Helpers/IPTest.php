@@ -1,6 +1,6 @@
 <?php
 /**
- * What an IP rule matches: sugarcommerce/network's Range, through the
+ * What an IP rule matches: Helpers\IP, through the
  * comparator and the sanitiser that hold a rule's patterns.
  *
  * @package SugarCommerce\Conditions
@@ -81,7 +81,7 @@ final class IPTest extends TestCase {
 	}
 
 	/**
-	 * What Range adds: a from-to range, and an IPv4 address an IPv6 socket
+	 * A from-to range, and an IPv4 address an IPv6 socket
 	 * reported, which is the IPv4 address it carries.
 	 */
 	public function test_ranges_and_mapped_addresses(): void {

@@ -89,7 +89,12 @@ final class MovingTest extends TestCase {
 
 		$composer = json_decode( (string) file_get_contents( dirname( __DIR__ ) . '/composer.json' ), true );
 		$this->assertArrayNotHasKey( 'files', $composer['autoload'], 'A file of functions is autoloaded.' );
-		$this->assertSame( [ 'php', 'sugarcommerce/network', 'sugarcommerce/plugin' ], array_keys( $composer['require'] ), 'The library depends on something new.' );
+		$this->assertSame( [ 'php' ], array_keys( $composer['require'] ), 'The library depends on something.' );
+
+		// Standalone: no class from another SugarCommerce package.
+		foreach ( new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( dirname( __DIR__ ) . '/src', \FilesystemIterator::SKIP_DOTS ) ) as $file ) {
+			$this->assertDoesNotMatchRegularExpression( '/SugarCommerce\\\\(?!Conditions\\b)/', (string) file_get_contents( (string) $file ), $file . ' uses another SugarCommerce package.' );
+		}
 	}
 
 	/**

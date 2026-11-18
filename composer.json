@@ -15,29 +15,11 @@
     }
   ],
   "require": {
-    "php": ">=8.3",
-    "sugarcommerce/network": "dev-main",
-    "sugarcommerce/plugin": "dev-main"
+    "php": ">=8.3"
   },
   "suggest": {
     "ext-intl": "Country names in the site's language for the country pickers, when no countries provider is given."
   },
-  "repositories": [
-    {
-      "type": "path",
-      "url": "../network",
-      "options": {
-        "symlink": false
-      }
-    },
-    {
-      "type": "path",
-      "url": "../plugin",
-      "options": {
-        "symlink": false
-      }
-    }
-  ],
   "autoload": {
     "psr-4": {
       "SugarCommerce\\Conditions\\": "src/"

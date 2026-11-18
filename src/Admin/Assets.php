@@ -18,7 +18,6 @@ namespace SugarCommerce\Conditions\Admin;
 use SugarCommerce\Conditions\Conditions;
 use SugarCommerce\Conditions\Operators;
 use SugarCommerce\Conditions\Registry;
-use SugarCommerce\Plugin\Assets as PackageAssets;
 
 /**
  * Class Assets
@@ -197,28 +196,23 @@ final class Assets {
 
 	/** Files *********************************************************************/
 
-	/*
-	 * Where the files are is SugarCommerce\Plugin\Assets' to work out, from
-	 * where this copy of the library sits -- under the content directory, the
-	 * site root, or a symlinked plugin. What stays here is what it does not
-	 * do: the `{prefix}_conditions_assets_url` override, and versions from
-	 * when each file last changed.
-	 */
-
 	/**
 	 * The library's assets folder on disk.
 	 *
 	 * @return string
 	 */
 	public static function dir(): string {
-		return dirname( __DIR__, 2 ) . '/assets';
+		return self::normalize( dirname( __DIR__, 2 ) . '/assets' );
 	}
 
 	/**
 	 * The URL of a file in the assets folder.
 	 *
+	 * Worked out from where this copy of the library sits -- under the
+	 * content directory, under the site root, or in a symlinked plugin --
+	 * since a Composer library has no plugin file to hand plugins_url().
 	 * `{prefix}_conditions_assets_url` overrides the folder's URL for a setup
-	 * Plugin\Assets cannot see, such as a CDN.
+	 * none of those describe.
 	 *
 	 * @param string $file e.g. `js/conditions.js`.
 	 *
@@ -246,9 +240,74 @@ final class Assets {
 	/**
 	 * The assets folder's URL.
 	 *
-	 * @return string Empty when the folder is somewhere WordPress does not serve.
+	 * @return string
 	 */
 	public static function base_url(): string {
-		return PackageAssets::locate( __FILE__ )['url'] ?? '';
+		$path = self::dir();
+
+		$candidates = [];
+
+		if ( defined( 'WP_CONTENT_DIR' ) && function_exists( 'content_url' ) ) {
+			$candidates[] = [ (string) WP_CONTENT_DIR, content_url() ];
+		}
+
+		if ( defined( 'ABSPATH' ) && function_exists( 'site_url' ) ) {
+			$candidates[] = [ (string) ABSPATH, site_url( '/' ) ];
+		}
+
+		foreach ( $candidates as [ $base, $base_url ] ) {
+			$url = self::url_within( $path, $base, $base_url );
+
+			if ( null !== $url ) {
+				return $url;
+			}
+		}
+
+		// A symlinked plugin: __DIR__ is the real path. Core keeps a map from
+		// each plugin's path under the content directory to its real one.
+		foreach ( (array) ( $GLOBALS['wp_plugin_paths'] ?? [] ) as $plugin_path => $real_path ) {
+			$real_path = rtrim( self::normalize( (string) $real_path ), '/' );
+
+			if ( '' !== $real_path && str_starts_with( $path, $real_path . '/' ) && defined( 'WP_CONTENT_DIR' ) && function_exists( 'content_url' ) ) {
+				$mapped = self::normalize( (string) $plugin_path ) . substr( $path, strlen( $real_path ) );
+				$url    = self::url_within( $mapped, (string) WP_CONTENT_DIR, content_url() );
+
+				if ( null !== $url ) {
+					return $url;
+				}
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * A path's URL, if it is inside a folder whose URL is known.
+	 *
+	 * @param string $path     The path.
+	 * @param string $base     The folder.
+	 * @param string $base_url The folder's URL.
+	 *
+	 * @return string|null
+	 */
+	private static function url_within( string $path, string $base, string $base_url ): ?string {
+		$base = rtrim( self::normalize( $base ), '/' );
+
+		if ( '' === $base || ! str_starts_with( $path, $base . '/' ) ) {
+			return null;
+		}
+
+		return rtrim( $base_url, '/' ) . substr( $path, strlen( $base ) );
+	}
+
+	/**
+	 * A path with forward slashes and no doubled ones.
+	 *
+	 * @param string $path The path.
+	 *
+	 * @return string
+	 */
+	private static function normalize( string $path ): string {
+		return (string) preg_replace( '#/+#', '/', str_replace( '\\', '/', $path ) );
 	}
 }
