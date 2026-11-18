@@ -50,6 +50,9 @@ function wpc_reset(): void {
 	$GLOBALS['wpc_caps']       = [];
 	$GLOBALS['wpc_last_query'] = null;
 	$GLOBALS['wpc_options']    = [ 'siteurl' => 'https://shop.example' ];
+	$GLOBALS['wpc_users']      = [];
+	$GLOBALS['wpc_post_by_id'] = [];
+	$GLOBALS['wpc_timezone']   = 'UTC';
 }
 
 wpc_reset();
@@ -141,7 +144,35 @@ function get_current_user_id() {
 }
 
 function get_userdata( $user_id ) {
+	return $GLOBALS['wpc_users'][ $user_id ] ?? false;
+}
+
+/**
+ * Core's answer for a primitive capability: the user's own, then whatever
+ * the user_has_cap filter makes of them.
+ */
+function user_can( $user, $capability, ...$args ) {
+	$user = is_object( $user ) ? $user : get_userdata( $user );
+
+	if ( ! $user ) {
+		return false;
+	}
+
+	$caps = apply_filters( 'user_has_cap', $user->allcaps, [ $capability ], array_merge( [ $capability, $user->ID ], $args ), $user );
+
+	return ! empty( $caps[ $capability ] );
+}
+
+function get_post( $post = null ) {
+	return $GLOBALS['wpc_post_by_id'][ is_object( $post ) ? $post->ID : $post ] ?? null;
+}
+
+function get_the_ID() {
 	return false;
+}
+
+function wp_timezone() {
+	return new DateTimeZone( $GLOBALS['wpc_timezone'] );
 }
 
 function is_super_admin( $user_id = false ) {
@@ -341,5 +372,28 @@ class WP_Post {
 	 * @param string $post_type  The post type.
 	 */
 	public function __construct( public int $ID = 0, public string $post_title = '', public string $post_type = 'post' ) {
+	}
+
+	public string $post_status = 'publish';
+
+	public string $post_date = '0000-00-00 00:00:00';
+
+	public string $post_date_gmt = '0000-00-00 00:00:00';
+
+	public string $post_modified = '0000-00-00 00:00:00';
+
+	public string $post_modified_gmt = '0000-00-00 00:00:00';
+}
+
+/**
+ * A user: the id and what their roles grant.
+ */
+class WP_User {
+
+	/**
+	 * @param int                 $ID      The id.
+	 * @param array<string, bool> $allcaps What the user's roles grant.
+	 */
+	public function __construct( public int $ID = 0, public array $allcaps = [] ) {
 	}
 }

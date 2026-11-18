@@ -117,18 +117,34 @@ final class User {
 	/**
 	 * Get all capabilities the user has.
 	 *
-	 * @param array $args The condition arguments.
+	 * The capabilities a rule asks about are answered by `user_can()`, not
+	 * read from `allcaps`: that is only what the user's roles grant, so it
+	 * missed a capability given through the `user_has_cap` filter (a
+	 * membership plugin) or `map_meta_cap`, a super admin on a multisite,
+	 * and kept one a filter had taken away.
+	 *
+	 * @param array $args  The condition arguments.
+	 * @param mixed $asked The capabilities the rule asks about, if any.
 	 *
 	 * @return array<string> Array of capability names.
 	 */
-	public static function get_capabilities( array $args ): array {
+	public static function get_capabilities( array $args, mixed $asked = null ): array {
 		$user = self::get( $args );
 
 		if ( ! $user ) {
 			return [];
 		}
 
-		return array_keys( array_filter( $user->allcaps ) );
+		$asked = array_values( array_filter( array_map( 'strval', (array) $asked ), static fn( string $cap ): bool => '' !== $cap ) );
+		$held  = array_diff( array_map( 'strval', array_keys( array_filter( (array) $user->allcaps ) ) ), $asked );
+
+		foreach ( $asked as $capability ) {
+			if ( user_can( $user, $capability ) ) {
+				$held[] = $capability;
+			}
+		}
+
+		return array_values( array_unique( $held ) );
 	}
 
 	/**

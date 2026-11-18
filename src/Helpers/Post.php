@@ -154,7 +154,7 @@ final class Post {
 
 		$parsed = Parse::number_unit( $args );
 
-		return DateTime::get_age( self::gmt_date( $post->post_date_gmt, $post->post_date ), $parsed['unit'] );
+		return self::age( $post, 'date', $parsed['unit'] );
 	}
 
 	/**
@@ -470,22 +470,48 @@ final class Post {
 
 		$parsed = Parse::number_unit( $args );
 
-		return DateTime::get_age( self::gmt_date( $post->post_modified_gmt, $post->post_modified ), $parsed['unit'] );
+		return self::age( $post, 'modified', $parsed['unit'] );
 	}
 
 	/**
-	 * A post date as UTC, for an age.
+	 * How long ago a post was published or modified.
 	 *
-	 * The gmt column is the one to read; the local one is off by the site's
-	 * offset. A draft has no gmt date yet (all zeros), and its local date is
-	 * the best there is.
+	 * `get_post_timestamp()` reads the local column in the site's timezone,
+	 * which is right for a draft too. A draft has no gmt date yet (all
+	 * zeros), and its local date read as UTC was off by the site's offset:
+	 * on a UTC+10 site a draft saved a minute ago was ten hours old.
 	 *
-	 * @param string $gmt   The *_gmt column.
+	 * @param WP_Post $post  The post.
+	 * @param string  $field 'date' or 'modified'.
+	 * @param string  $unit  The unit to return.
+	 *
+	 * @return int
+	 */
+	private static function age( WP_Post $post, string $field, string $unit ): int {
+		$timestamp = function_exists( 'get_post_timestamp' )
+			? get_post_timestamp( $post, $field )
+			: self::local_timestamp( (string) ( 'modified' === $field ? $post->post_modified : $post->post_date ) );
+
+		return is_int( $timestamp ) ? DateTime::get_age_from_timestamp( $timestamp, $unit ) : 0;
+	}
+
+	/**
+	 * A post's local date column as a timestamp, read in the site's timezone.
+	 *
+	 * What `get_post_timestamp()` does, for when it is not loaded.
+	 *
 	 * @param string $local The local column.
 	 *
-	 * @return string
+	 * @return int|false
 	 */
-	private static function gmt_date( string $gmt, string $local ): string {
-		return str_starts_with( $gmt, '0000' ) ? $local : $gmt . ' UTC';
+	private static function local_timestamp( string $local ): int|false {
+		if ( '' === $local || str_starts_with( $local, '0000' ) ) {
+			return false;
+		}
+
+		$zone = function_exists( 'wp_timezone' ) ? wp_timezone() : new \DateTimeZone( 'UTC' );
+		$date = \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $local, $zone );
+
+		return false === $date ? false : $date->getTimestamp();
 	}
 }

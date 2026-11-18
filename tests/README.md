@@ -10,7 +10,8 @@ read back what WordPress was asked to do.
 - **Admin** -- what a saved rule keeps, and the save itself: the nonce, the
   capability, and values arriving in the database as they were typed.
 - **Helpers** -- IP and email patterns, the request (and what it refuses to
-  believe), and the velocity counts.
+  believe), the velocity counts, a user's capabilities as `user_can()` answers
+  them, and a post's age in the site's timezone.
 - **ConditionsTest** -- registering a set, checking it, the prefix, the
   search endpoints' permission and the editor's data.
 - **BuiltinTest** -- every built-in condition is well formed and judged as

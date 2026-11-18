@@ -73,7 +73,7 @@ final class User {
 				'description'   => __( 'Check if the user has specific capabilities.', 'sugarcommerce' ),
 				'operators'     => Operators::collection(),
 				'options'       => fn() => WordPress::get_capabilities(),
-				'compare_value' => fn( $args ) => UserHelper::get_capabilities( $args ),
+				'compare_value' => fn( $args, $asked = null ) => UserHelper::get_capabilities( $args, $asked ),
 				'required_args' => [],
 			],
 
