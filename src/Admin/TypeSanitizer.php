@@ -17,7 +17,7 @@ namespace SugarCommerce\Conditions\Admin;
 
 use DateTime;
 use SugarCommerce\Conditions\Helpers\Email;
-use SugarCommerce\Conditions\Helpers\IP;
+use SugarCommerce\Network\Range;
 
 /**
  * Class TypeSanitizer
@@ -298,10 +298,11 @@ final class TypeSanitizer {
 
 		$value = trim( sanitize_text_field( (string) $value ) );
 
-		// An address, a CIDR range, or a wildcard with at least one literal
-		// part. The old check accepted anything with a star in it, because
-		// the wildcard test it leaned on never failed.
-		return '' !== $value && IP::is_valid_pattern( $value ) ? $value : '';
+		// An address, a CIDR range, a from-to range, or a wildcard with at
+		// least one literal part -- what the comparator matches. The old
+		// check accepted anything with a star in it, because the wildcard
+		// test it leaned on never failed.
+		return '' !== $value && Range::is_valid( $value ) ? $value : '';
 	}
 
 	/**

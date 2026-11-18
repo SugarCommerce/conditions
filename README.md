@@ -11,9 +11,15 @@ fraud. Hard-coding them means a release every time one changes; a settings
 field means parsing whatever the owner typed.
 
 This gives the owner a builder — pick a condition, an operator and a value,
-and group them with any/all — and gives you one call that answers. It
-depends on nothing but WordPress, so any plugin can carry it: conditions
-about your shop, your customers or a paid lookup service are yours to add.
+and group them with any/all — and gives you one call that answers.
+Conditions about your shop, your customers or a paid lookup service are
+yours to add.
+
+It leans on two SugarCommerce packages rather than carrying copies:
+sugarcommerce/network reads the patterns in an IP rule (its `Range`: an
+address, `/24`, `203.0.113.*`, `2001:db8:*`, or `a-b`), and
+sugarcommerce/plugin's `Assets` finds where the builder's scripts are
+served from. Both are Strauss-safe, so any plugin can still carry it.
 
 ## Features
 
@@ -264,7 +270,9 @@ built-in id outside the twelve above are unchanged.
 | `AcceptLanguage::get_common_languages()` | `Options\Request::get_languages()` |
 | the `conditionsData` script global | `window.sugarConditions[ $set ]` |
 | REST `conditions/v1` | `Conditions::rest_namespace()` |
-| `IP::is_match()`, `Email::matches_any()` (wp-ip-utils, wp-email-utils) | `Helpers\IP::is_match()`, `Helpers\Email::matches_any()` |
+| `IP::is_match()` (wp-ip-utils) | `SugarCommerce\Network\Range::contains_any( $patterns, $ip )` -- the package's own `Helpers\IP` copy is gone |
+| `Email::matches_any()` (wp-email-utils) | `Helpers\Email::matches_any()` |
+| the assets folder's URL, worked out here | `SugarCommerce\Plugin\Assets::locate()`; `Admin\Assets::url()` and the `…_assets_url` filter are unchanged |
 
 What is no longer built in, and where it went:
 
@@ -279,10 +287,16 @@ What is no longer built in, and where it went:
 | the country header read through Cloudflare's ranges | the `country` provider |
 | `Helpers\Geo::get_continent_options()` | sugarcommerce/geo |
 
+Answers that changed:
+
+* An IP rule matches a from-to range (`203.0.113.1-203.0.113.50`), and an IPv4 address an IPv6 socket reported (`::ffff:203.0.113.9`) against IPv4 patterns. A wildcard needs every part: `10.*` and `2001:db8::*` are not saved (neither ever matched an address).
+* A REST request is core's `wp_is_serving_rest_request()`; the trash notice is core's `wp_admin_notice()`, with the same markup; the ajax and user-search endpoints read `include` and `role` with `wp_parse_list()`, so spaces separate too and an empty entry is dropped.
+
 ## Requirements
 
 * PHP 8.3 or later
 * WordPress 7.1 or later
+* sugarcommerce/network and sugarcommerce/plugin
 
 ## License
 

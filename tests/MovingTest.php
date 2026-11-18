@@ -89,7 +89,7 @@ final class MovingTest extends TestCase {
 
 		$composer = json_decode( (string) file_get_contents( dirname( __DIR__ ) . '/composer.json' ), true );
 		$this->assertArrayNotHasKey( 'files', $composer['autoload'], 'A file of functions is autoloaded.' );
-		$this->assertSame( [ 'php' ], array_keys( $composer['require'] ), 'The library depends on something.' );
+		$this->assertSame( [ 'php', 'sugarcommerce/network', 'sugarcommerce/plugin' ], array_keys( $composer['require'] ), 'The library depends on something new.' );
 	}
 
 	/**

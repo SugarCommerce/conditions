@@ -30,7 +30,7 @@ final class Context {
 	 * @return bool
 	 */
 	public static function is_rest( array $args = [] ): bool {
-		return (bool) ( $args['is_rest'] ?? ( defined( 'REST_REQUEST' ) && REST_REQUEST ) );
+		return (bool) ( $args['is_rest'] ?? wp_is_serving_rest_request() );
 	}
 
 	/**

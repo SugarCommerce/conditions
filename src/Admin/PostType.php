@@ -403,11 +403,12 @@ final class PostType {
 			$count === 1 ? strtolower( $singular ) : strtolower( $plural )
 		);
 
-		printf(
-			'<div class="notice notice-success is-dismissible"><p>%s <a href="%s">%s</a></p></div>',
-			esc_html( $message ),
-			esc_url( $undo_url ),
-			esc_html__( 'Undo', 'sugarcommerce' )
+		wp_admin_notice(
+			sprintf( '%s <a href="%s">%s</a>', esc_html( $message ), esc_url( $undo_url ), esc_html__( 'Undo', 'sugarcommerce' ) ),
+			[
+				'type'        => 'success',
+				'dismissible' => true,
+			]
 		);
 	}
 

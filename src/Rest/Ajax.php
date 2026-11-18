@@ -75,8 +75,7 @@ final class Ajax {
 		// Parse include IDs if provided
 		$ids = null;
 		if ( ! empty( $include ) ) {
-			$ids = array_map( 'trim', explode( ',', $include ) );
-			$ids = array_filter( $ids );
+			$ids = wp_parse_list( $include );
 		}
 
 		// Call the callback

@@ -16,7 +16,7 @@ declare( strict_types=1 );
 namespace SugarCommerce\Conditions;
 
 use SugarCommerce\Conditions\Helpers\Email;
-use SugarCommerce\Conditions\Helpers\IP;
+use SugarCommerce\Network\Range;
 
 /**
  * Class Comparator
@@ -276,8 +276,8 @@ final class Comparator {
 		// Normalize patterns to array
 		$patterns = array_filter( array_map( 'trim', array_filter( (array) $user_value, 'is_scalar' ) ) );
 
-		// Exact, CIDR and wildcard.
-		$matches = IP::is_match( $compare_value, $patterns );
+		// Exact, CIDR, wildcard and from-to, read by sugarcommerce/network.
+		$matches = Range::contains_any( $patterns, $compare_value );
 
 		return match ( $operator ) {
 			'ip_match' => $matches,

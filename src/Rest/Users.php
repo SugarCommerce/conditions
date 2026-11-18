@@ -49,7 +49,7 @@ final class Users {
 
 		// Filter by role if specified and allowed
 		if ( ! empty( $role ) ) {
-			$roles = array_map( 'trim', explode( ',', $role ) );
+			$roles = wp_parse_list( $role );
 
 			// Validate roles are allowed
 			foreach ( $roles as $r ) {
