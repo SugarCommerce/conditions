@@ -1,0 +1,431 @@
+<?php
+/**
+ * Post Type Registration
+ *
+ * Handles custom post type registration, labels, messages, redirects, and menu highlighting.
+ *
+ * @package     SugarCommerce\Conditions\Admin
+ * @copyright   Copyright (c) 2026, ArrayPress Limited
+ * @license     GPL-2.0-or-later
+ * @since       1.0.0
+ * @author      David Sherlock
+ */
+
+declare( strict_types=1 );
+
+namespace SugarCommerce\Conditions\Admin;
+
+/**
+ * Class PostType
+ *
+ * Manages custom post type registration and related functionality.
+ */
+final class PostType {
+
+	/**
+	 * The condition set ID (also the post type name).
+	 *
+	 * @var string
+	 */
+	private string $set_id;
+
+	/**
+	 * The condition set configuration.
+	 *
+	 * @var array
+	 */
+	private array $config;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param string $set_id The condition set ID.
+	 * @param array  $config The condition set configuration.
+	 */
+	public function __construct( string $set_id, array $config ) {
+		$this->set_id = $set_id;
+		$this->config = $config;
+	}
+
+	/**
+	 * Register the post type and hook into WordPress.
+	 *
+	 * @return void
+	 */
+	public function register(): void {
+		// Don't register if already registered
+		if ( post_type_exists( $this->set_id ) ) {
+			return;
+		}
+
+		$this->register_post_type();
+		$this->register_hooks();
+	}
+
+	/**
+	 * Register the custom post type.
+	 *
+	 * @return void
+	 */
+	private function register_post_type(): void {
+		$labels = $this->get_labels();
+
+		// `show_ui` defaults to true so post-new.php / post.php screens
+		// remain functional even when `show_in_menu` is false (the
+		// "hidden but functional" pattern — useful when a separate admin
+		// page surfaces the CPT via tabs or list tables).
+		$args = [
+			'labels'              => $labels,
+			'public'              => false,
+			'show_ui'             => $this->config['show_ui'] ?? true,
+			'show_in_menu'        => $this->determine_menu_visibility(),
+			'menu_icon'           => $this->config['menu_icon'],
+			'capability_type'     => 'post',
+			'map_meta_cap'        => true,
+			'capabilities'        => $this->capabilities(),
+			'hierarchical'        => false,
+			'supports'            => $this->config['supports'] ?? [ 'title' ],
+			'has_archive'         => false,
+			'rewrite'             => false,
+			'show_in_rest'        => false,
+			'exclude_from_search' => true,
+		];
+
+		register_post_type( $this->set_id, $args );
+	}
+
+	/**
+	 * Every primitive capability of the post type, mapped to the set's own.
+	 *
+	 * Registered as capability_type 'post', the rules answered to the post
+	 * capabilities: any Editor could retitle, unpublish or trash every rule
+	 * in a fraud or blocking set -- and the matcher only reads published
+	 * rules, so trashing one silently switched it off. Only the conditions
+	 * meta was ever gated on the set's capability. Now the post type is too.
+	 *
+	 * @return array<string, string>
+	 */
+	private function capabilities(): array {
+		$capability = (string) ( $this->config['capability'] ?? 'manage_options' );
+
+		return array_fill_keys(
+			[
+				'edit_posts',
+				'edit_others_posts',
+				'edit_private_posts',
+				'edit_published_posts',
+				'publish_posts',
+				'read_private_posts',
+				'delete_posts',
+				'delete_private_posts',
+				'delete_published_posts',
+				'delete_others_posts',
+				'create_posts',
+			],
+			$capability
+		);
+	}
+
+	/**
+	 * Register WordPress hooks.
+	 *
+	 * @return void
+	 */
+	private function register_hooks(): void {
+		// Custom post updated messages
+		add_filter( 'post_updated_messages', [ $this, 'filter_post_updated_messages' ] );
+
+		// Menu highlighting for nested CPTs
+		if ( ! empty( $this->config['parent_file'] ) ) {
+			add_filter( 'parent_file', [ $this, 'filter_parent_file' ] );
+		}
+
+		if ( ! empty( $this->config['submenu_file'] ) ) {
+			add_filter( 'submenu_file', [ $this, 'filter_submenu_file' ] );
+		}
+
+		// Redirect after trash
+		if ( ! empty( $this->config['redirect']['after_trash'] ) ) {
+			add_action( 'trashed_post', [ $this, 'handle_trash_redirect' ] );
+		}
+
+		// Admin notices for trash with undo
+		if ( ! empty( $this->config['redirect']['show_undo'] ) ) {
+			add_action( 'admin_notices', [ $this, 'display_trash_notice' ] );
+		}
+	}
+
+	/**
+	 * Get the post type labels.
+	 *
+	 * @return array
+	 */
+	private function get_labels(): array {
+		$singular = $this->config['labels']['singular'];
+		$plural   = $this->config['labels']['plural'];
+
+		/*
+		 * Every placeholder below is the post type's own singular or plural
+		 * name, which is what the variable beside it is called. Twenty
+		 * identical translators comments would say less than this one does.
+		 */
+		// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
+		$labels = [
+			'name'                  => $plural,
+			'singular_name'         => $singular,
+			'add_new'               => sprintf( __( 'Add New %s', 'sugarcommerce' ), $singular ),
+			'add_new_item'          => sprintf( __( 'Add New %s', 'sugarcommerce' ), $singular ),
+			'edit_item'             => sprintf( __( 'Edit %s', 'sugarcommerce' ), $singular ),
+			'new_item'              => sprintf( __( 'New %s', 'sugarcommerce' ), $singular ),
+			'view_item'             => sprintf( __( 'View %s', 'sugarcommerce' ), $singular ),
+			'view_items'            => sprintf( __( 'View %s', 'sugarcommerce' ), $plural ),
+			'search_items'          => sprintf( __( 'Search %s', 'sugarcommerce' ), $plural ),
+			'not_found'             => sprintf( __( 'No %s found', 'sugarcommerce' ), strtolower( $plural ) ),
+			'not_found_in_trash'    => sprintf( __( 'No %s found in trash', 'sugarcommerce' ), strtolower( $plural ) ),
+			'all_items'             => sprintf( __( 'All %s', 'sugarcommerce' ), $plural ),
+			'archives'              => sprintf( __( '%s Archives', 'sugarcommerce' ), $singular ),
+			'attributes'            => sprintf( __( '%s Attributes', 'sugarcommerce' ), $singular ),
+			'insert_into_item'      => sprintf( __( 'Insert into %s', 'sugarcommerce' ), strtolower( $singular ) ),
+			'uploaded_to_this_item' => sprintf( __( 'Uploaded to this %s', 'sugarcommerce' ), strtolower( $singular ) ),
+			'filter_items_list'     => sprintf( __( 'Filter %s list', 'sugarcommerce' ), strtolower( $plural ) ),
+			'items_list_navigation' => sprintf( __( '%s list navigation', 'sugarcommerce' ), $plural ),
+			'items_list'            => sprintf( __( '%s list', 'sugarcommerce' ), $plural ),
+		];
+		// phpcs:enable WordPress.WP.I18n.MissingTranslatorsComment
+
+		/**
+		 * Filter the post type labels.
+		 *
+		 * @param array  $labels   The labels array.
+		 * @param string $set_id   The condition set ID.
+		 * @param array  $config   The condition set configuration.
+		 */
+		return apply_filters( "{$this->set_id}_labels", $labels, $this->set_id, $this->config );
+	}
+
+	/**
+	 * Determine menu visibility for the post type.
+	 *
+	 * @return bool|string
+	 */
+	private function determine_menu_visibility(): bool|string {
+		// Explicitly hidden
+		if ( $this->config['show_in_menu'] === false ) {
+			return false;
+		}
+
+		// Nested under parent menu
+		if ( ! empty( $this->config['menu_parent'] ) ) {
+			return $this->config['menu_parent'];
+		}
+
+		// Top-level menu
+		return true;
+	}
+
+	/**
+	 * Filter post updated messages.
+	 *
+	 * @param array $messages The messages array.
+	 *
+	 * @return array
+	 */
+	public function filter_post_updated_messages( array $messages ): array {
+		global $post;
+
+		if ( ! $post || $post->post_type !== $this->set_id ) {
+			return $messages;
+		}
+
+		$singular = $this->config['labels']['singular'];
+
+		// Same as the labels above: the placeholder is the post type's own name
+		// wherever it is not already carrying its own translators comment.
+		// phpcs:disable WordPress.WP.I18n.MissingTranslatorsComment
+		$messages[ $this->set_id ] = [
+			0  => '', // Unused. Messages start at index 1.
+			1  => sprintf( __( '%s updated.', 'sugarcommerce' ), $singular ),
+			2  => __( 'Custom field updated.', 'sugarcommerce' ),
+			3  => __( 'Custom field deleted.', 'sugarcommerce' ),
+			4  => sprintf( __( '%s updated.', 'sugarcommerce' ), $singular ),
+			// Read-only, same as the trash notice: WordPress redirected here.
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			5  => isset( $_GET['revision'] )
+				? sprintf(
+					/* translators: 1: post type singular name, 2: revision title. */
+					__( '%1$s restored to revision from %2$s.', 'sugarcommerce' ),
+					$singular,
+					// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+					wp_post_revision_title( (int) $_GET['revision'], false )
+				)
+				: false,
+			6  => sprintf( __( '%s published.', 'sugarcommerce' ), $singular ),
+			7  => sprintf( __( '%s saved.', 'sugarcommerce' ), $singular ),
+			8  => sprintf( __( '%s submitted.', 'sugarcommerce' ), $singular ),
+			9  => sprintf(
+				/* translators: 1: post type singular name, 2: formatted date. */
+				__( '%1$s scheduled for: %2$s.', 'sugarcommerce' ),
+				$singular,
+				date_i18n( __( 'M j, Y @ G:i', 'sugarcommerce' ), strtotime( $post->post_date ) )
+			),
+			10 => sprintf( __( '%s draft updated.', 'sugarcommerce' ), $singular ),
+		];
+		// phpcs:enable WordPress.WP.I18n.MissingTranslatorsComment
+
+		/**
+		 * Filter the post updated messages.
+		 *
+		 * @param array  $messages The messages for this post type.
+		 * @param string $set_id   The condition set ID.
+		 * @param array  $config   The condition set configuration.
+		 */
+		$messages[ $this->set_id ] = apply_filters(
+			"{$this->set_id}_post_updated_messages",
+			$messages[ $this->set_id ],
+			$this->set_id,
+			$this->config
+		);
+
+		return $messages;
+	}
+
+	/**
+	 * Filter parent file for menu highlighting.
+	 *
+	 * @param string $parent_file The parent file.
+	 *
+	 * @return string
+	 */
+	public function filter_parent_file( string $parent_file ): string {
+		global $current_screen;
+
+		if ( $current_screen && $current_screen->post_type === $this->set_id ) {
+			return $this->config['parent_file'];
+		}
+
+		return $parent_file;
+	}
+
+	/**
+	 * Filter submenu file for menu highlighting.
+	 *
+	 * @param string|null $submenu_file The submenu file.
+	 *
+	 * @return string|null
+	 */
+	public function filter_submenu_file( ?string $submenu_file ): ?string {
+		global $current_screen;
+
+		if ( $current_screen && $current_screen->post_type === $this->set_id ) {
+			return $this->config['submenu_file'];
+		}
+
+		return $submenu_file;
+	}
+
+	/**
+	 * Handle redirect after trashing a post.
+	 *
+	 * @param int $post_id The post ID being trashed.
+	 *
+	 * @return void
+	 */
+	public function handle_trash_redirect( int $post_id ): void {
+		$post = get_post( $post_id );
+
+		if ( ! $post || $post->post_type !== $this->set_id ) {
+			return;
+		}
+
+		// Only redirect if we're in admin and this is a direct request (not AJAX)
+		if ( ! is_admin() || wp_doing_ajax() ) {
+			return;
+		}
+
+		$redirect_url = $this->config['redirect']['after_trash'];
+
+		// Add trashed message parameters
+		$redirect_url = add_query_arg( [
+			"{$this->set_id}_trashed" => 1,
+			'ids'                     => $post_id,
+		], admin_url( $redirect_url ) );
+
+		wp_safe_redirect( $redirect_url );
+		exit;
+	}
+
+	/**
+	 * Display trash notice with undo link.
+	 *
+	 * @return void
+	 */
+	public function display_trash_notice(): void {
+		// Read-only: this renders the notice WordPress redirected here to show,
+		// after its own trash handler already ran and checked its own nonce.
+		// Nothing is written, so there is nothing here for a nonce to protect.
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		if ( empty( $_GET[ "{$this->set_id}_trashed" ] ) ) {
+			return;
+		}
+
+		$ids = isset( $_GET['ids'] )
+			? array_map( 'absint', explode( ',', sanitize_text_field( wp_unslash( $_GET['ids'] ) ) ) )
+			: [];
+
+		if ( empty( $ids ) ) {
+			return;
+		}
+
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$singular = $this->config['labels']['singular'];
+		$plural   = $this->config['labels']['plural'];
+		$count    = count( $ids );
+
+		// Build undo URL. post.php restores one post, so several ids link to
+		// the trash view instead of restoring the first and dropping the rest.
+		$undo_url = 1 === $count
+			? wp_nonce_url(
+				admin_url( sprintf( 'post.php?action=untrash&post=%d', $ids[0] ) ),
+				'untrash-post_' . $ids[0]
+			)
+			: admin_url( sprintf( 'edit.php?post_status=trash&post_type=%s', rawurlencode( $this->set_id ) ) );
+
+		$message = sprintf(
+			/* translators: 1: number of items, 2: post type name, singular or plural to match. */
+			_n(
+				'%1$d %2$s moved to the Trash.',
+				'%1$d %2$s moved to the Trash.',
+				$count,
+				'sugarcommerce'
+			),
+			$count,
+			$count === 1 ? strtolower( $singular ) : strtolower( $plural )
+		);
+
+		printf(
+			'<div class="notice notice-success is-dismissible"><p>%s <a href="%s">%s</a></p></div>',
+			esc_html( $message ),
+			esc_url( $undo_url ),
+			esc_html__( 'Undo', 'sugarcommerce' )
+		);
+	}
+
+	/**
+	 * Get the set ID.
+	 *
+	 * @return string
+	 */
+	public function get_set_id(): string {
+		return $this->set_id;
+	}
+
+	/**
+	 * Get the configuration.
+	 *
+	 * @return array
+	 */
+	public function get_config(): array {
+		return $this->config;
+	}
+}

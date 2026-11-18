@@ -1,0 +1,313 @@
+<?php
+/**
+ * Admin Assets
+ *
+ * Handles script and style enqueuing for the conditions admin interface.
+ *
+ * @package     SugarCommerce\Conditions\Admin
+ * @copyright   Copyright (c) 2026, ArrayPress Limited
+ * @license     GPL-2.0-or-later
+ * @since       1.0.0
+ * @author      David Sherlock
+ */
+
+declare( strict_types=1 );
+
+namespace SugarCommerce\Conditions\Admin;
+
+use SugarCommerce\Conditions\Conditions;
+use SugarCommerce\Conditions\Operators;
+use SugarCommerce\Conditions\Registry;
+
+/**
+ * Class Assets
+ *
+ * Manages admin assets for conditions UI.
+ */
+final class Assets {
+
+	/**
+	 * The bundled Select2's version.
+	 *
+	 * @var string
+	 */
+	private const SELECT2_VERSION = '4.1.0';
+
+	/**
+	 * Registered condition set IDs.
+	 *
+	 * @var array
+	 */
+	private array $set_ids = [];
+
+	/**
+	 * Constructor.
+	 *
+	 * @param array $set_ids Array of condition set IDs.
+	 */
+	public function __construct( array $set_ids = [] ) {
+		$this->set_ids = $set_ids;
+	}
+
+	/**
+	 * Register asset hooks.
+	 *
+	 * @return void
+	 */
+	public function register(): void {
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+	}
+
+	/**
+	 * Add a set ID to track.
+	 *
+	 * @param string $set_id The condition set ID.
+	 *
+	 * @return void
+	 */
+	public function add_set_id( string $set_id ): void {
+		if ( ! in_array( $set_id, $this->set_ids, true ) ) {
+			$this->set_ids[] = $set_id;
+		}
+	}
+
+	/**
+	 * Enqueue admin assets.
+	 *
+	 * @param string $hook Current admin page hook.
+	 *
+	 * @return void
+	 */
+	public function enqueue_assets( string $hook ): void {
+		global $post_type;
+
+		// Only load on our CPT edit screens
+		if ( ! is_string( $post_type ) || ! in_array( $post_type, $this->set_ids, true ) ) {
+			return;
+		}
+
+		if ( ! in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+			return;
+		}
+
+		$select2 = Conditions::handle( 'select2' );
+		$admin   = Conditions::handle( 'admin' );
+
+		wp_enqueue_style( $select2, self::url( 'css/select2.min.css' ), [], self::SELECT2_VERSION );
+		wp_enqueue_script( $select2, self::url( 'js/select2.min.js' ), [ 'jquery' ], self::SELECT2_VERSION, true );
+
+		wp_enqueue_style( $admin, self::url( 'css/conditions.css' ), [ $select2 ], self::version( 'css/conditions.css' ) );
+		wp_enqueue_script( $admin, self::url( 'js/conditions.js' ), [ 'jquery', $select2, 'wp-util' ], self::version( 'js/conditions.js' ), true );
+
+		// Keyed by set rather than one global, so whichever plugin's copy of
+		// this library drew the screen, the script reads that copy's data.
+		wp_add_inline_script(
+			$admin,
+			sprintf(
+				'window.sugarConditions = window.sugarConditions || {}; window.sugarConditions[%s] = %s;',
+				wp_json_encode( $post_type ),
+				wp_json_encode( $this->get_localized_data( $post_type ) )
+			),
+			'before'
+		);
+	}
+
+	/**
+	 * Get localized data for JavaScript.
+	 *
+	 * @param string $post_type The current post type.
+	 *
+	 * @return array
+	 */
+	public function get_localized_data( string $post_type ): array {
+		$data = [
+			'conditions' => self::for_script( Registry::get_conditions( $post_type ) ),
+			'operators'  => Operators::get_all(),
+			'restUrl'    => rest_url( Conditions::rest_namespace() ),
+			'nonce'      => wp_create_nonce( 'wp_rest' ),
+			'i18n'       => $this->get_i18n_strings(),
+		];
+
+		/**
+		 * Filter the data handed to the builder script:
+		 * `{prefix}_conditions_localized_data`.
+		 *
+		 * @param array  $data      The localized data.
+		 * @param string $post_type The current post type.
+		 */
+		return apply_filters( Conditions::hook( 'localized_data' ), $data, $post_type );
+	}
+
+	/**
+	 * Conditions as the script needs them: no closures, no objects.
+	 *
+	 * A class-based condition carries its own instance and a configured one
+	 * its callbacks; JSON writes either as `{}`, and a condition object that
+	 * held a closure could not be encoded at all.
+	 *
+	 * @param array $conditions Resolved conditions.
+	 *
+	 * @return array
+	 */
+	private static function for_script( array $conditions ): array {
+		foreach ( $conditions as $id => $condition ) {
+			foreach ( $condition as $key => $value ) {
+				if ( is_object( $value ) ) {
+					unset( $conditions[ $id ][ $key ] );
+				}
+			}
+		}
+
+		return $conditions;
+	}
+
+	/**
+	 * Get i18n strings for JavaScript.
+	 *
+	 * @return array
+	 */
+	private function get_i18n_strings(): array {
+		$strings = [
+			'selectCondition' => __( 'Select condition...', 'sugarcommerce' ),
+			'selectOperator'  => __( 'Select operator...', 'sugarcommerce' ),
+			'selectValue'     => __( 'Select...', 'sugarcommerce' ),
+			'search'          => __( 'Search...', 'sugarcommerce' ),
+			'addCondition'    => __( 'Add Condition', 'sugarcommerce' ),
+			'addGroup'        => __( 'Add "OR" Group', 'sugarcommerce' ),
+			'remove'          => __( 'Remove', 'sugarcommerce' ),
+			'and'             => __( 'AND', 'sugarcommerce' ),
+			'or'              => __( 'OR', 'sugarcommerce' ),
+			'duplicate'       => __( 'Duplicate', 'sugarcommerce' ),
+			'delete'          => __( 'Delete', 'sugarcommerce' ),
+			'matchAll'        => __( 'Match all of the following rules', 'sugarcommerce' ),
+			'orMatchAll'      => __( 'Or match all of the following rules', 'sugarcommerce' ),
+			'noResults'       => __( 'No results found', 'sugarcommerce' ),
+			'loading'         => __( 'Loading...', 'sugarcommerce' ),
+			'errorLoading'    => __( 'Error loading results', 'sugarcommerce' ),
+		];
+
+		/**
+		 * Filter the builder's strings: `{prefix}_conditions_i18n_strings`.
+		 *
+		 * @param array $strings The i18n strings.
+		 */
+		return apply_filters( Conditions::hook( 'i18n_strings' ), $strings );
+	}
+
+	/** Files *********************************************************************/
+
+	/**
+	 * The library's assets folder on disk.
+	 *
+	 * @return string
+	 */
+	public static function dir(): string {
+		return self::normalize( dirname( __DIR__, 2 ) . '/assets' );
+	}
+
+	/**
+	 * The URL of a file in the assets folder.
+	 *
+	 * Worked out from where this copy of the library sits -- under the
+	 * content directory, under the site root, or in a symlinked plugin --
+	 * since a Composer library has no plugin file to hand plugins_url().
+	 * `{prefix}_conditions_assets_url` overrides the folder's URL for a setup
+	 * none of those describe.
+	 *
+	 * @param string $file e.g. `js/conditions.js`.
+	 *
+	 * @return string
+	 */
+	public static function url( string $file ): string {
+		$base = (string) apply_filters( Conditions::hook( 'assets_url' ), self::base_url() );
+
+		return rtrim( $base, '/' ) . '/' . ltrim( $file, '/' );
+	}
+
+	/**
+	 * A file's version: when it last changed, so a new copy is fetched.
+	 *
+	 * @param string $file e.g. `js/conditions.js`.
+	 *
+	 * @return string
+	 */
+	private static function version( string $file ): string {
+		$time = @filemtime( self::dir() . '/' . $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- a missing file is a version, not a warning.
+
+		return false === $time ? '1.0.0' : (string) $time;
+	}
+
+	/**
+	 * The assets folder's URL.
+	 *
+	 * @return string
+	 */
+	public static function base_url(): string {
+		$path = self::dir();
+
+		$candidates = [];
+
+		if ( defined( 'WP_CONTENT_DIR' ) && function_exists( 'content_url' ) ) {
+			$candidates[] = [ (string) WP_CONTENT_DIR, content_url() ];
+		}
+
+		if ( defined( 'ABSPATH' ) && function_exists( 'site_url' ) ) {
+			$candidates[] = [ (string) ABSPATH, site_url( '/' ) ];
+		}
+
+		foreach ( $candidates as [ $base, $base_url ] ) {
+			$url = self::url_within( $path, $base, $base_url );
+
+			if ( null !== $url ) {
+				return $url;
+			}
+		}
+
+		// A symlinked plugin: __DIR__ is the real path. Core keeps a map from
+		// each plugin's path under the content directory to its real one.
+		foreach ( (array) ( $GLOBALS['wp_plugin_paths'] ?? [] ) as $plugin_path => $real_path ) {
+			$real_path = rtrim( self::normalize( (string) $real_path ), '/' );
+
+			if ( '' !== $real_path && str_starts_with( $path, $real_path . '/' ) && defined( 'WP_CONTENT_DIR' ) && function_exists( 'content_url' ) ) {
+				$mapped = self::normalize( (string) $plugin_path ) . substr( $path, strlen( $real_path ) );
+				$url    = self::url_within( $mapped, (string) WP_CONTENT_DIR, content_url() );
+
+				if ( null !== $url ) {
+					return $url;
+				}
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * A path's URL, if it is inside a folder whose URL is known.
+	 *
+	 * @param string $path     The path.
+	 * @param string $base     The folder.
+	 * @param string $base_url The folder's URL.
+	 *
+	 * @return string|null
+	 */
+	private static function url_within( string $path, string $base, string $base_url ): ?string {
+		$base = rtrim( self::normalize( $base ), '/' );
+
+		if ( '' === $base || ! str_starts_with( $path, $base . '/' ) ) {
+			return null;
+		}
+
+		return rtrim( $base_url, '/' ) . substr( $path, strlen( $base ) );
+	}
+
+	/**
+	 * A path with forward slashes and no doubled ones.
+	 *
+	 * @param string $path The path.
+	 *
+	 * @return string
+	 */
+	private static function normalize( string $path ): string {
+		return (string) preg_replace( '#/+#', '/', str_replace( '\\', '/', $path ) );
+	}
+}
