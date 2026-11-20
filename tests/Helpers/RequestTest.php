@@ -123,6 +123,23 @@ final class RequestTest extends TestCase {
 		$_SERVER['HTTP_REFERER'] = 'javascript:alert(1)';
 		$this->assertSame( '', Request::get_referrer() );
 		$this->assertFalse( Request::has_referrer() );
+
+		// network's reading: an address has no registrable domain, so two
+		// LAN addresses are not each other's site.
+		$this->assertSame( '192.168.1.10', Request::get_referrer_domain( [ 'referrer_url' => 'http://192.168.1.10/x' ] ) );
+	}
+
+	/**
+	 * The agent is network's reading of it: trimmed and capped before any
+	 * rule's pattern runs over it.
+	 */
+	public function test_the_user_agent_is_capped(): void {
+		$_SERVER['HTTP_USER_AGENT'] = '  ' . str_repeat( 'A', 5000 ) . '  ';
+
+		$this->assertSame( 512, strlen( Request::get_user_agent() ) );
+		$this->assertSame( 'given', Request::get_user_agent( [ 'user_agent' => 'given' ] ) );
+
+		unset( $_SERVER['HTTP_USER_AGENT'] );
 	}
 
 	/**

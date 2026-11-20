@@ -18,6 +18,7 @@ namespace SugarCommerce\Conditions\Helpers;
 use SugarCommerce\Conditions\Conditions;
 use SugarCommerce\Conditions\Traits\Helpers\Request\Referrer;
 use SugarCommerce\Conditions\Traits\Helpers\Request\UserAgent;
+use SugarCommerce\Network\AcceptLanguage;
 use SugarCommerce\Network\IP;
 
 /**
@@ -31,69 +32,6 @@ final class Request {
 
 	use Referrer;
 	use UserAgent;
-
-	/**
-	 * Two-label endings where the registrable domain is three labels.
-	 *
-	 * @var string[]
-	 */
-	private const array COMPOUND_SUFFIXES = [
-		'co.uk',
-		'org.uk',
-		'me.uk',
-		'ac.uk',
-		'gov.uk',
-		'net.uk',
-		'sch.uk',
-		'com.au',
-		'net.au',
-		'org.au',
-		'edu.au',
-		'gov.au',
-		'co.nz',
-		'net.nz',
-		'org.nz',
-		'govt.nz',
-		'co.za',
-		'org.za',
-		'co.jp',
-		'ne.jp',
-		'or.jp',
-		'ac.jp',
-		'go.jp',
-		'co.in',
-		'net.in',
-		'org.in',
-		'gov.in',
-		'ac.in',
-		'com.br',
-		'net.br',
-		'org.br',
-		'gov.br',
-		'com.mx',
-		'org.mx',
-		'com.ar',
-		'com.tr',
-		'gov.tr',
-		'com.sa',
-		'com.sg',
-		'com.hk',
-		'com.tw',
-		'com.cn',
-		'net.cn',
-		'org.cn',
-		'gov.cn',
-		'co.kr',
-		'or.kr',
-		'com.pl',
-		'com.es',
-		'com.co',
-		'co.il',
-		'com.my',
-		'com.ph',
-		'co.th',
-		'com.vn',
-	];
 
 	/**
 	 * The UTM parameters a rule can ask about.
@@ -199,44 +137,20 @@ final class Request {
 	 * @return string[]
 	 */
 	public static function get_languages( array $args = [] ): array {
-		$header = $args['accept_language'] ?? self::read( $_SERVER, 'HTTP_ACCEPT_LANGUAGE' );
-		$header = is_array( $header ) ? implode( ',', array_filter( $header, 'is_scalar' ) ) : (string) $header;
-		$tags   = [];
+		$header = $args['accept_language'] ?? null;
+		$header = is_array( $header ) ? implode( ',', array_filter( $header, 'is_scalar' ) ) : ( null === $header ? null : (string) $header );
+		$out    = [];
 
-		foreach ( explode( ',', $header ) as $i => $part ) {
-			$bits = explode( ';', trim( $part ) );
-			$tag  = trim( $bits[0] );
-
-			if ( 1 !== preg_match( '/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/', $tag ) ) {
+		// network's reading: capped, qualities clamped, `q=0` dropped, best
+		// first and in the order sent among equals. `*` is any language,
+		// which no rule names.
+		foreach ( array_keys( AcceptLanguage::parse( $header ) ) as $tag ) {
+			if ( '*' === $tag ) {
 				continue;
 			}
 
-			$q = 1.0;
-
-			foreach ( array_slice( $bits, 1 ) as $param ) {
-				if ( preg_match( '/^\s*q\s*=\s*([0-9.]+)\s*$/i', $param, $m ) ) {
-					$q = (float) $m[1];
-				}
-			}
-
-			if ( $q <= 0 ) {
-				continue;
-			}
-
-			$parts = explode( '-', $tag );
-			$tag   = strtolower( $parts[0] ) . ( isset( $parts[1] ) ? '-' . strtoupper( $parts[1] ) : '' );
-
-			// Order by quality, then by position.
-			$tags[] = [ $q, -$i, $tag ];
-		}
-
-		rsort( $tags );
-
-		$out = [];
-
-		foreach ( $tags as [ , , $tag ] ) {
-			$out[] = $tag;
-			$out[] = explode( '-', $tag )[0];
+			$out[] = (string) $tag;
+			$out[] = AcceptLanguage::extract_language( (string) $tag );
 		}
 
 		return array_values( array_unique( $out ) );

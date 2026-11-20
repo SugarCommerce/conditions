@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace SugarCommerce\Conditions\Traits\Helpers\Request;
 
+use SugarCommerce\Network\Referrer as Referrers;
+
 /**
  * Where a visitor came from: the referrer, its host and domain, and
  * whether it was another site.
@@ -27,13 +29,10 @@ trait Referrer {
 			return (string) $args['referrer_url'];
 		}
 
-		if ( ! isset( $_SERVER['HTTP_REFERER'] ) || ! is_string( $_SERVER['HTTP_REFERER'] ) ) {
-			return '';
-		}
-
-		// esc_url_raw drops schemes that are not http(s) -- a javascript: URL
-		// is not a referrer anyone should compare against.
-		$url = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
+		// network's reading: esc_url_raw() drops schemes that are not
+		// http(s) -- a javascript: URL is not a referrer anyone should
+		// compare against.
+		$url = Referrers::get() ?? '';
 
 		return false !== filter_var( $url, FILTER_VALIDATE_URL ) ? $url : '';
 	}
@@ -63,7 +62,7 @@ trait Referrer {
 			return (string) $args['referrer_domain'];
 		}
 
-		return self::root_domain( self::get_referrer_host( $args ) );
+		return Referrers::root_domain( self::get_referrer_host( $args ) );
 	}
 
 	/**
@@ -93,31 +92,5 @@ trait Referrer {
 		$site = wp_parse_url( (string) get_option( 'siteurl' ), PHP_URL_HOST );
 
 		return '' !== $host && $host !== strtolower( (string) $site );
-	}
-
-	/**
-	 * A host's registrable domain, without `www.`.
-	 *
-	 * Taking the last two labels gives `co.uk` for every site in Britain; where
-	 * the last two are a known compound ending, take three.
-	 *
-	 * @param string $host The host.
-	 *
-	 * @return string
-	 */
-	public static function root_domain( string $host ): string {
-		$host  = (string) preg_replace( '/^www\./', '', strtolower( trim( $host, '. ' ) ) );
-		$parts = explode( '.', $host );
-		$count = count( $parts );
-
-		if ( $count < 3 ) {
-			return $host;
-		}
-
-		$suffix = $parts[ $count - 2 ] . '.' . $parts[ $count - 1 ];
-
-		return in_array( $suffix, self::COMPOUND_SUFFIXES, true )
-			? $parts[ $count - 3 ] . '.' . $suffix
-			: $suffix;
 	}
 }

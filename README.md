@@ -17,7 +17,9 @@ yours to add.
 
 It leans on two SugarCommerce packages rather than carrying copies:
 sugarcommerce/network reads the patterns in an IP rule (its `Range`: an
-address, `/24`, `203.0.113.*`, `2001:db8:*`, or `a-b`), and
+address, `/24`, `203.0.113.*`, `2001:db8:*`, or `a-b`) and the request
+itself -- the visitor's IP, `Accept-Language`, the user agent, the referrer
+and its registrable domain -- for `Helpers\Request`, and
 sugarcommerce/plugin's `Assets` finds where the builder's scripts are
 served from and registers its build. Both are Strauss-safe, so any plugin
 can still carry it.

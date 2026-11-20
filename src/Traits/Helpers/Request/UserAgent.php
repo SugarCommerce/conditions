@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace SugarCommerce\Conditions\Traits\Helpers\Request;
 
+use SugarCommerce\Network\UserAgent as Agents;
+
 /**
  * What a visitor's user agent says: empty, headless, or an outdated
  * browser.
@@ -27,7 +29,7 @@ trait UserAgent {
 			return (string) $args['user_agent'];
 		}
 
-		return self::read( $_SERVER, 'HTTP_USER_AGENT' );
+		return Agents::current();
 	}
 
 	/**
