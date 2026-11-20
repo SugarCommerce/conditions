@@ -313,7 +313,9 @@ hooks named `myshop_conditions_*`, handles `myshop-conditions-*`.
 
 * `src/Conditions.php` (configuration and hooks), `Registry.php` (sets and
   conditions, with `src/Traits/Registry/Registration.php`), `Matcher.php`,
-  `Comparator.php`, `Operators.php`, `Condition.php`, `MatchResult(s).php`.
+  `Comparator.php`, `Operators.php`, `Condition.php`.
+* `src/Models/`: what a check answers, `MatchResult` and `MatchResults`
+  (`SugarCommerce\Conditions\Models\…`), read-only.
 * `src/Builtin/` (the conditions that ship), `src/Helpers/` (what they read:
   the request -- with `src/Traits/Helpers/Request/` for the referrer and the
   user agent -- the user, the post, dates, email, geo, velocity),

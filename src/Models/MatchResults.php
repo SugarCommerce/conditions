@@ -13,7 +13,7 @@
 
 declare( strict_types=1 );
 
-namespace SugarCommerce\Conditions;
+namespace SugarCommerce\Conditions\Models;
 
 use ArrayIterator;
 use Countable;
@@ -25,7 +25,7 @@ use Traversable;
  *
  * Collection of MatchResult objects.
  */
-class MatchResults implements Countable, IteratorAggregate {
+final readonly class MatchResults implements Countable, IteratorAggregate {
 
 	/**
 	 * Array of match results.

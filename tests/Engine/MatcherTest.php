@@ -16,8 +16,8 @@ declare( strict_types=1 );
 namespace SugarCommerce\Conditions\Tests\Engine;
 
 use SugarCommerce\Conditions\Matcher;
-use SugarCommerce\Conditions\MatchResults;
-use SugarCommerce\Conditions\MatchResult;
+use SugarCommerce\Conditions\Models\MatchResults;
+use SugarCommerce\Conditions\Models\MatchResult;
 use SugarCommerce\Conditions\Registry;
 use PHPUnit\Framework\TestCase;
 

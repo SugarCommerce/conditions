@@ -13,7 +13,7 @@
 
 declare( strict_types=1 );
 
-namespace SugarCommerce\Conditions;
+namespace SugarCommerce\Conditions\Models;
 
 use WP_Post;
 
@@ -22,40 +22,20 @@ use WP_Post;
  *
  * Contains the result of matching conditions.
  */
-final class MatchResult {
+final readonly class MatchResult {
 
 	/**
-	 * Whether a match was found.
-	 *
-	 * @var bool
-	 */
-	private bool $matched;
-
-	/**
-	 * The matched rule post.
-	 *
-	 * @var WP_Post|null
-	 */
-	private ?WP_Post $rule;
-
-	/**
-	 * The matched condition group.
-	 *
-	 * @var array|null
-	 */
-	private ?array $group;
-
-	/**
-	 * Constructor.
+	 * A result: the shape only, read through the methods below.
 	 *
 	 * @param bool         $matched Whether a match was found.
 	 * @param WP_Post|null $rule    The matched rule post.
 	 * @param array|null   $group   The matched condition group.
 	 */
-	public function __construct( bool $matched, ?WP_Post $rule = null, ?array $group = null ) {
-		$this->matched = $matched;
-		$this->rule    = $rule;
-		$this->group   = $group;
+	public function __construct(
+		private bool $matched,
+		private ?WP_Post $rule = null,
+		private ?array $group = null
+	) {
 	}
 
 	/**

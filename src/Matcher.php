@@ -16,6 +16,8 @@ declare( strict_types=1 );
 namespace SugarCommerce\Conditions;
 
 use WP_Post;
+use SugarCommerce\Conditions\Models\MatchResult;
+use SugarCommerce\Conditions\Models\MatchResults;
 
 /**
  * Class Matcher

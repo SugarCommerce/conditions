@@ -16,6 +16,9 @@ declare( strict_types=1 );
 
 namespace SugarCommerce\Conditions;
 
+use SugarCommerce\Conditions\Models\MatchResult;
+use SugarCommerce\Conditions\Models\MatchResults;
+
 /**
  * Class Conditions
  *
