@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { init, savedGroups } from '../../assets/js/builder/builder';
 import {
+	build,
 	editorPage,
 	fakeRoutes,
 	posted,
@@ -230,7 +231,7 @@ beforeEach( () => {
 
 afterEach( () => {
 	document.body.innerHTML = '';
-	delete window.sugarConditions;
+	delete window.SugarCommerceConditions;
 	withoutJQuery();
 	vi.useRealTimers();
 } );
@@ -238,7 +239,7 @@ afterEach( () => {
 describe( 'a new rule', () => {
 	test( 'starts as one group of one empty row that cannot be removed', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ group ] = groups();
 		const [ row ] = rowsOf( group );
@@ -277,7 +278,7 @@ describe( 'a new rule', () => {
 
 	test( 'choosing a condition offers its operators, its field and its description', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -288,7 +289,10 @@ describe( 'a new rule', () => {
 
 		expect( operator.disabled ).toBe( false );
 		expect( [ ...operator.options ].map( ( o ) => o.value ) ).toEqual(
-			Object.keys( window.sugarConditions.discount_rule.operators.number )
+			Object.keys(
+				window.SugarCommerceConditions[ build ].discount_rule.operators
+					.number
+			)
 		);
 		expect( operator.value ).toBe( operator.options[ 0 ].value );
 		expect( [ input.type, input.min, input.step ] ).toEqual( [
@@ -315,7 +319,7 @@ describe( 'a new rule', () => {
 
 	test( 'a field that was a picker is undone before the next is drawn', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -341,7 +345,7 @@ describe( 'a new rule', () => {
 describe( 'rows and groups', () => {
 	test( 'Add Condition adds a row, and rows can then be removed down to one', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ group ] = groups();
 
@@ -372,7 +376,7 @@ describe( 'rows and groups', () => {
 
 	test( "a group's only row stays, even when asked through a stale button", () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const button = groups()[ 0 ].querySelector( '.remove-condition' );
 
@@ -384,7 +388,7 @@ describe( 'rows and groups', () => {
 
 	test( 'Add Group adds an OR and an "Or match" group', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		click( document.querySelector( '.add-group' ) );
 
@@ -407,7 +411,7 @@ describe( 'rows and groups', () => {
 
 	test( 'deleting a group takes one OR with it, wherever it was', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const add = document.querySelector( '.add-group' );
 		const layout = () =>
@@ -440,9 +444,9 @@ describe( 'rows and groups', () => {
 
 	test( 'deleting the last group leaves a new empty one', () => {
 		editorPage();
-		window.sugarConditions.discount_rule.i18n.matchAll =
+		window.SugarCommerceConditions[ build ].discount_rule.i18n.matchAll =
 			'Alle diese Regeln';
-		init( fetcher );
+		init( fetcher, build );
 
 		const first = groups()[ 0 ].dataset.groupId;
 
@@ -459,7 +463,7 @@ describe( 'rows and groups', () => {
 
 	test( 'the links do not follow their href', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const event = new MouseEvent( 'click', {
 			bubbles: true,
@@ -478,7 +482,7 @@ describe( 'a saved rule', () => {
 	test( 'is drawn with every value, and posts exactly what was saved', async () => {
 		editorPage( SAVED );
 
-		const builder = init( fetcher );
+		const [ builder ] = init( fetcher, build );
 
 		await builder.settled();
 
@@ -499,9 +503,10 @@ describe( 'a saved rule', () => {
 
 	test( 'the searched fields show labels, asked once each with the nonce', async () => {
 		editorPage( SAVED );
-		await init( fetcher ).settled();
+		await init( fetcher, build )[ 0 ].settled();
 
-		const rest = window.sugarConditions.discount_rule.restUrl;
+		const rest =
+			window.SugarCommerceConditions[ build ].discount_rule.restUrl;
 
 		expect( fetcher.calls.map( ( c ) => c.url ) ).toEqual( [
 			`${ rest }/posts?include=4%2C9&post_type=page`,
@@ -532,7 +537,7 @@ describe( 'a saved rule', () => {
 
 	test( 'a picker whose labels cannot be fetched keeps its values', async () => {
 		editorPage( SAVED );
-		await init( fakeRoutes( {} ) ).settled();
+		await init( fakeRoutes( {} ), build )[ 0 ].settled();
 
 		expect( posted() ).toEqual( [
 			...pairs( 'g0', 0, POSTED ),
@@ -543,7 +548,7 @@ describe( 'a saved rule', () => {
 	test( 'Duplicate copies a group as it stands, with ids of its own', async () => {
 		editorPage( SAVED );
 
-		const builder = init( fetcher );
+		const [ builder ] = init( fetcher, build );
 
 		await builder.settled();
 		click( groups()[ 0 ].querySelector( '.duplicate-group' ) );
@@ -575,7 +580,7 @@ describe( 'a saved rule', () => {
 				],
 			},
 		] );
-		await init( fetcher ).settled();
+		await init( fetcher, build )[ 0 ].settled();
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -629,7 +634,7 @@ describe( 'typing entries', () => {
 
 	test( 'tags split on commas and spaces', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -641,7 +646,7 @@ describe( 'typing entries', () => {
 
 	test( 'IPs take addresses and ranges and refuse the rest', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -657,7 +662,7 @@ describe( 'typing entries', () => {
 
 	test( 'email patterns split only on commas', () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -680,7 +685,7 @@ describe( 'typing entries', () => {
 
 	test( "a value picker shows its field's placeholder", () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -703,7 +708,7 @@ describe( 'typing entries', () => {
 
 	test( "the open search box turns off the browser's suggestions", () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -725,10 +730,11 @@ describe( 'typing entries', () => {
 describe( 'searching', () => {
 	test( 'opening a picker searches its route; a typed term waits a moment', async () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
-		const rest = window.sugarConditions.discount_rule.restUrl;
+		const rest =
+			window.SugarCommerceConditions[ build ].discount_rule.restUrl;
 
 		choose( row, 'page' );
 
@@ -770,7 +776,7 @@ describe( 'searching', () => {
 
 	test( "a condition's own search asks with its set and id", async () => {
 		editorPage();
-		init( fetcher );
+		init( fetcher, build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -781,13 +787,13 @@ describe( 'searching', () => {
 		await tick();
 
 		expect( fetcher.calls.map( ( c ) => c.url ) ).toEqual( [
-			`${ window.sugarConditions.discount_rule.restUrl }/ajax?set_id=discount_rule&condition_id=customer`,
+			`${ window.SugarCommerceConditions[ build ].discount_rule.restUrl }/ajax?set_id=discount_rule&condition_id=customer`,
 		] );
 	} );
 
 	test( 'a failed search says so', async () => {
 		editorPage();
-		init( fakeRoutes( {} ) );
+		init( fakeRoutes( {} ), build );
 
 		const [ row ] = rowsOf( groups()[ 0 ] );
 
@@ -808,7 +814,7 @@ describe( 'without jQuery', () => {
 		withoutJQuery();
 		editorPage( SAVED );
 
-		const builder = init( fetcher );
+		const [ builder ] = init( fetcher, build );
 
 		await builder.settled();
 
@@ -838,5 +844,62 @@ describe( 'without jQuery', () => {
 test( 'a page without the builder is left alone', () => {
 	document.body.innerHTML = '<p>Another screen</p>';
 
-	expect( init( fetcher ) ).toBeNull();
+	expect( init( fetcher, 'shop-conditions-admin' ) ).toEqual( [] );
+} );
+
+test( 'two builds on one page each start only their own builder, from their own data and templates', () => {
+	editorPage();
+
+	// A second plugin's copy: another handle, the same set id, its own data
+	// and its own row template -- with a condition the first set lacks.
+	const mine = document.querySelector( '.conditions-builder' );
+	const theirs = mine.cloneNode( true );
+	const other = 'other-conditions-admin';
+
+	theirs.setAttribute( 'data-build', other );
+	theirs
+		.querySelector( 'template[data-template="condition-row"]' )
+		.content.querySelector( '.condition-select' )
+		.append( new window.Option( 'Their Condition', 'theirs' ) );
+	mine.after( theirs );
+
+	window.SugarCommerceConditions[ other ] = {
+		discount_rule: {
+			...window.SugarCommerceConditions[ build ].discount_rule,
+			restUrl: 'https://other.test/wp-json/other-conditions/v1',
+		},
+	};
+
+	const [ first, ...rest ] = init( fetcher, build );
+
+	expect( rest ).toEqual( [] );
+	expect( first.builder ).toBe( mine );
+	expect( theirs.querySelectorAll( '.condition-group' ) ).toHaveLength( 0 );
+	expect( mine.querySelectorAll( '.condition-group' ) ).toHaveLength( 1 );
+
+	const [ second ] = init( fetcher, other );
+
+	expect( second.builder ).toBe( theirs );
+	expect( second.restUrl ).toBe(
+		'https://other.test/wp-json/other-conditions/v1'
+	);
+	expect( first.restUrl ).not.toBe( second.restUrl );
+	expect( mine.querySelectorAll( '.condition-group' ) ).toHaveLength( 1 );
+
+	const options = ( builder ) =>
+		[
+			...builder.querySelector( '.condition-row .condition-select' )
+				.options,
+		].map( ( option ) => option.value );
+
+	expect( options( theirs ) ).toContain( 'theirs' );
+	expect( options( mine ) ).not.toContain( 'theirs' );
+} );
+
+test( 'a builder that names no build, or another, is left alone', () => {
+	editorPage();
+
+	expect( init( fetcher, '' ) ).toEqual( [] );
+	expect( init( fetcher, 'someone-else-conditions-admin' ) ).toEqual( [] );
+	expect( document.querySelectorAll( '.condition-group' ) ).toHaveLength( 0 );
 } );

@@ -127,6 +127,29 @@ final class ConditionsTest extends TestCase {
 		$this->assertSame( 'myshop_2_conditions_set_registered', Conditions::hook( 'set_registered' ) );
 		$this->assertSame( 'myshop-2-conditions/v1', Conditions::rest_namespace() );
 		$this->assertSame( 'myshop-2-conditions-admin', Conditions::handle( 'admin' ) );
+
+		Conditions::use_prefix( '' );
+
+		$this->assertSame( '', Conditions::prefix(), 'An empty prefix goes back to the derived one.' );
+	}
+
+	/**
+	 * A Strauss-prefixed copy that names no prefix takes its build's.
+	 *
+	 * Without it two copies that both left use_prefix() out would answer on
+	 * one REST namespace, load one script handle and fire one set of hooks.
+	 */
+	public function test_a_prefixed_build_names_itself(): void {
+		$this->assertSame( '', Conditions::prefix_for( 'SugarCommerce\\Conditions' ) );
+		$this->assertSame( 'sugarcart', Conditions::prefix_for( 'SugarCart\\Vendor\\SugarCommerce\\Conditions' ) );
+		$this->assertSame( 'arraypress_edd_fraudfilter', Conditions::prefix_for( 'ArrayPress\\EDD\\FraudFilter\\Lib\\Conditions' ) );
+		$this->assertSame( 'sugarcommerce_playground_vendor', Conditions::prefix_for( 'SugarCommerce\\Playground\\Vendor\\SugarCommerce\\Conditions' ) );
+
+		// Unprefixed here, prefix() cannot show it asks the rule: '' either
+		// way. So the source is read.
+		$source = (string) file_get_contents( dirname( __DIR__ ) . '/src/Conditions.php' );
+
+		$this->assertStringContainsString( 'return self::$prefix ?? self::prefix_for( __NAMESPACE__ );', $source );
 	}
 
 	/**
@@ -311,7 +334,7 @@ final class ConditionsTest extends TestCase {
 
 		[ $handle, $inline ] = $GLOBALS['wpc_calls']['wp_add_inline_script'][0];
 		$this->assertSame( 'shop-conditions-admin', $handle );
-		$this->assertStringStartsWith( 'window.sugarConditions = window.sugarConditions || {}; window.sugarConditions["discount_rule"] = {', $inline );
+		$this->assertStringStartsWith( 'window.SugarCommerceConditions=window.SugarCommerceConditions||{};window.SugarCommerceConditions["shop-conditions-admin"]=window.SugarCommerceConditions["shop-conditions-admin"]||{};window.SugarCommerceConditions["shop-conditions-admin"]["discount_rule"]={', $inline );
 
 		$data = ( new Assets() )->get_localized_data( 'discount_rule' );
 		$this->assertSame( 'https://shop.example/wp-json/shop-conditions/v1', $data['restUrl'] );

@@ -16,6 +16,7 @@ declare( strict_types=1 );
 
 namespace SugarCommerce\Conditions\Admin;
 
+use SugarCommerce\Conditions\Conditions;
 use SugarCommerce\Conditions\Registry;
 use WP_Post;
 
@@ -58,8 +59,13 @@ final class Editor {
 
 		// Nonce for security
 		wp_nonce_field( self::nonce_action( $set_id ), 'conditions_nonce' );
+
+		// data-build names this copy of the library by its script's handle:
+		// another plugin's copy, loaded on the same page, leaves the builder
+		// alone. Its templates are inside it, so a builder copies its own
+		// set's rows and never another's.
 		?>
-		<div class="conditions-builder" data-set-id="<?php echo esc_attr( $set_id ); ?>">
+		<div class="conditions-builder" data-set-id="<?php echo esc_attr( $set_id ); ?>" data-build="<?php echo esc_attr( Conditions::handle( 'admin' ) ); ?>">
 			<?php if ( ! empty( $description ) ) : ?>
 				<p class="description">
 					<?php echo esc_html( $description ); ?>
@@ -73,9 +79,9 @@ final class Editor {
 			<button type="button" class="button add-group">
 				<?php esc_html_e( '+ Add "OR" Group', 'sugarcommerce' ); ?>
 			</button>
-		</div>
 
-		<?php self::render_templates( $conditions ); ?>
+			<?php self::render_templates( $conditions ); ?>
+		</div>
 		<?php
 	}
 
@@ -91,7 +97,7 @@ final class Editor {
 	 */
 	private static function render_templates( array $conditions ): void {
 		?>
-		<template id="tmpl-condition-group"
+		<template data-template="condition-group"
 				data-first-label="<?php esc_attr_e( 'Match all of the following rules', 'sugarcommerce' ); ?>"
 				data-other-label="<?php esc_attr_e( 'Or match all of the following rules', 'sugarcommerce' ); ?>">
 			<div class="condition-group" data-group-id="">
@@ -115,7 +121,7 @@ final class Editor {
 			</div>
 		</template>
 
-		<template id="tmpl-condition-row">
+		<template data-template="condition-row">
 			<div class="condition-row" data-condition-id="">
 				<div class="condition-fields">
 					<select class="condition-select conditions-condition-select">
@@ -151,7 +157,7 @@ final class Editor {
 			</div>
 		</template>
 
-		<template id="tmpl-group-connector">
+		<template data-template="group-connector">
 			<div class="group-connector"><?php esc_html_e( 'OR', 'sugarcommerce' ); ?></div>
 		</template>
 		<?php

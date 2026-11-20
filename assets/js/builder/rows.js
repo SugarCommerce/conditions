@@ -44,7 +44,11 @@ export function updateRemoveButtons( group ) {
  * @return {Element} The row.
  */
 export function addRule( context, group, groupId, saved ) {
-	const row = rowElement( saved?.id || generateId(), groupId );
+	const row = rowElement(
+		context.builder,
+		saved?.id || generateId(),
+		groupId
+	);
 
 	group.querySelector( '.conditions-list' ).append( row );
 
@@ -76,10 +80,10 @@ export function addGroup( context, saved ) {
 	const index = container.querySelectorAll( '.condition-group' ).length;
 
 	if ( index > 0 ) {
-		container.append( connectorElement() );
+		container.append( connectorElement( context.builder ) );
 	}
 
-	const group = groupElement( groupId, index );
+	const group = groupElement( context.builder, groupId, index );
 
 	container.append( group );
 

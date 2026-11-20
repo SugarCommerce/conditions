@@ -108,12 +108,16 @@ final class Assets {
 
 		wp_enqueue_script( $admin );
 
-		// Keyed by set rather than one global, so whichever plugin's copy of
-		// this library drew the screen, the script reads that copy's data.
+		// Keyed by this build's handle, then by set: a set's id is the
+		// plugin's choice and two plugins could pick the same one, but each
+		// copy's script reads only the entry its own handle names.
 		wp_add_inline_script(
 			$admin,
 			sprintf(
-				'window.sugarConditions = window.sugarConditions || {}; window.sugarConditions[%s] = %s;',
+				'window.SugarCommerceConditions=window.SugarCommerceConditions||{};'
+				. 'window.SugarCommerceConditions[%1$s]=window.SugarCommerceConditions[%1$s]||{};'
+				. 'window.SugarCommerceConditions[%1$s][%2$s]=%3$s;',
+				wp_json_encode( $admin ),
 				wp_json_encode( $post_type ),
 				wp_json_encode( $this->get_localized_data( $post_type ) )
 			),

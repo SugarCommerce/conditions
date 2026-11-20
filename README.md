@@ -252,7 +252,7 @@ edit screens only; `…_assets_url` still moves it with the stylesheets.
 | `builder/serialize` | a row read back as a saved rule, for Duplicate |
 | `builder/templates` | a group, a row and an OR copied from the `<template>`s `Admin\Editor` draws |
 | `lib/select2` | the one place Select2 -- and through it jQuery -- is reached |
-| `lib/config`, `lib/dom` | what PHP handed over (`window.sugarConditions[ $set ]`); escaping |
+| `lib/config`, `lib/dom` | what PHP handed over (`window.SugarCommerceConditions[ $handle ][ $set ]`) and which builders are this build's; escaping |
 
 Select2 stays: it is bundled, loaded by its own handle, and it brings jQuery.
 Only `lib/select2` touches it, reading `window.jQuery` when it is wanted --
@@ -277,7 +277,16 @@ differs from what was committed.
 Each plugin bundles its own copy, and the REST routes, hooks and script
 handles are global. `Conditions::use_prefix( 'myshop' )`, before the first
 `register()`, gives this copy its own: routes under `myshop-conditions/v1`,
-hooks named `myshop_conditions_*`, handles `myshop-conditions-*`.
+hooks named `myshop_conditions_*`, handles `myshop-conditions-*`. Left out,
+a Strauss-prefixed copy takes its build's name
+(`SugarCart\Vendor\SugarCommerce\Conditions` is `sugarcart`); a plain
+Composer install has no prefix.
+
+On the page, each copy's data is `window.SugarCommerceConditions[ handle ][ set ]`,
+keyed by its builder script's handle (`Conditions::handle( 'admin' )`) before
+the set's id -- two plugins may pick the same set id. The meta box names its
+build in `data-build` and holds its own `<template>`s, and each copy's script
+starts only the builders that name it.
 
 | Hook | |
 |---|---|

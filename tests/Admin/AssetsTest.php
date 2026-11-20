@@ -102,7 +102,8 @@ final class AssetsTest extends TestCase {
 		[ $handle, $inline, $position ] = $GLOBALS['wpc_calls']['wp_add_inline_script'][0];
 
 		$this->assertSame( 'shop-conditions-admin', $handle );
-		$this->assertStringStartsWith( 'window.sugarConditions = window.sugarConditions || {}; window.sugarConditions["discount_rule"] = {', $inline );
+		$this->assertStringStartsWith( 'window.SugarCommerceConditions=window.SugarCommerceConditions||{};window.SugarCommerceConditions["shop-conditions-admin"]=window.SugarCommerceConditions["shop-conditions-admin"]||{};window.SugarCommerceConditions["shop-conditions-admin"]["discount_rule"]={', $inline );
+		$this->assertStringNotContainsString( 'sugarConditions', $inline, 'The registry is keyed by build, not one global keyed by set.' );
 		$this->assertSame( 'before', $position );
 	}
 
@@ -172,9 +173,19 @@ final class AssetsTest extends TestCase {
 		$this->assertStringContainsString( 'data-first-label="Match all of the following rules"', $html );
 		$this->assertStringContainsString( 'data-other-label="Or match all of the following rules"', $html );
 
-		foreach ( [ 'tmpl-condition-group', 'tmpl-condition-row', 'tmpl-group-connector' ] as $id ) {
-			$this->assertMatchesRegularExpression( '/<template id="' . $id . '"/', $html );
+		// The builder names its build, and holds its own templates: a page
+		// with another plugin's builder on it has two of each, and an id
+		// would find the first.
+		$this->assertStringContainsString( 'data-build="conditions-admin"', $html );
+		$this->assertStringNotContainsString( '<template id=', $html );
+
+		$builder = substr( $html, (int) strpos( $html, '<div class="conditions-builder"' ) );
+
+		foreach ( [ 'condition-group', 'condition-row', 'group-connector' ] as $name ) {
+			$this->assertMatchesRegularExpression( '/<template data-template="' . $name . '"/', $builder );
 		}
+
+		$this->assertMatchesRegularExpression( '/<template data-template="group-connector">.*<\/template>\s*<\/div>\s*$/s', $html, 'The templates are inside the builder.' );
 
 		$this->assertStringContainsString( '<optgroup label="Cart"><option value="total">Cart Total</option></optgroup>', $html );
 		$this->assertStringContainsString( 'class="condition-groups" data-conditions=\'[]\'', $html );

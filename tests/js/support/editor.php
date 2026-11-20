@@ -5,8 +5,8 @@
  * Run by tests/js/support/page.js: `php editor.php [saved.json]`. Registers a
  * set with one condition of every field type, draws the meta box
  * (Admin\Editor::render(), the saved groups given as JSON) and prints
- * `{ "html": …, "config": … }`, the config being what Admin\Assets hands the
- * script. The tests then run against the real markup and data, not a copy.
+ * `{ "html": …, "build": …, "config": … }`, the config being what
+ * Admin\Assets hands the script and the build its key. The tests then run against the real markup and data, not a copy.
  *
  * @package SugarCommerce\Conditions
  */
@@ -176,6 +176,7 @@ $html = (string) ob_get_clean();
 echo json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- printed for a test, not WordPress.
 	[
 		'html'   => $html,
+		'build'  => Conditions::handle( 'admin' ),
 		'config' => ( new Assets() )->get_localized_data( 'discount_rule' ),
 	]
 );

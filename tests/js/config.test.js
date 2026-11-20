@@ -4,31 +4,63 @@
 
 import { afterEach, expect, test } from 'vitest';
 
-import { readConfig, settings } from '../../assets/js/lib/config';
+import {
+	belongsTo,
+	build,
+	handleOf,
+	readConfig,
+	settings,
+} from '../../assets/js/lib/config';
 import { escapeHtml, html, raw } from '../../assets/js/lib/dom';
 
 afterEach( () => {
-	delete window.sugarConditions;
+	delete window.SugarCommerceConditions;
 } );
 
-test( "each builder reads its own set's entry", () => {
+test( "each builder reads its own build's entry for its set", () => {
 	const builder = document.createElement( 'div' );
 	const mine = { restUrl: 'https://a.test/' };
+	const theirs = { restUrl: 'https://b.test/' };
 
 	builder.setAttribute( 'data-set-id', 'discount_rule' );
-	window.sugarConditions = {
-		fraud_rule: { restUrl: 'x' },
-		discount_rule: mine,
+	window.SugarCommerceConditions = {
+		'shop-conditions-admin': {
+			fraud_rule: { restUrl: 'x' },
+			discount_rule: mine,
+		},
+		'other-conditions-admin': { discount_rule: theirs },
 	};
 
-	expect( readConfig( builder ) ).toBe( mine );
-	expect( readConfig( null ) ).toEqual( {} );
+	expect( readConfig( builder, 'shop-conditions-admin' ) ).toBe( mine );
+	expect( readConfig( builder, 'other-conditions-admin' ) ).toBe( theirs );
+	expect( readConfig( builder, 'unknown' ) ).toEqual( {} );
+	expect( readConfig( null, 'shop-conditions-admin' ) ).toEqual( {} );
 
 	builder.setAttribute( 'data-set-id', 'other' );
-	expect( readConfig( builder ) ).toEqual( {} );
+	expect( readConfig( builder, 'shop-conditions-admin' ) ).toEqual( {} );
 
-	delete window.sugarConditions;
-	expect( readConfig( builder ) ).toEqual( {} );
+	delete window.SugarCommerceConditions;
+	expect( readConfig( builder, 'shop-conditions-admin' ) ).toEqual( {} );
+} );
+
+test( "a script's handle is its element's id, less -js; a builder belongs to the build it names", () => {
+	const script = document.createElement( 'script' );
+	const builder = document.createElement( 'div' );
+
+	script.id = 'shop-conditions-admin-js';
+	expect( handleOf( script ) ).toBe( 'shop-conditions-admin' );
+	expect( handleOf( document.createElement( 'script' ) ) ).toBe( '' );
+	expect( handleOf( null ) ).toBe( '' );
+
+	// No <script> element runs the tests.
+	expect( build ).toBe( '' );
+
+	builder.setAttribute( 'data-build', 'shop-conditions-admin' );
+	expect( belongsTo( builder, 'shop-conditions-admin' ) ).toBe( true );
+	expect( belongsTo( builder, 'other-conditions-admin' ) ).toBe( false );
+
+	builder.removeAttribute( 'data-build' );
+	expect( belongsTo( builder, '' ) ).toBe( false );
 } );
 
 test( 'every setting is there, even when PHP sent none', () => {

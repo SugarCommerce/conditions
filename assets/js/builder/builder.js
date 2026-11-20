@@ -3,7 +3,7 @@
  * condition selects, and the groups a saved rule already has.
  */
 
-import { readConfig, settings } from '../lib/config';
+import { belongsTo, build, readConfig, settings } from '../lib/config';
 import { on } from '../lib/dom';
 import { onChange } from '../lib/select2';
 import { applyCondition } from './rule';
@@ -34,26 +34,34 @@ export function savedGroups( container ) {
 }
 
 /**
- * Start the builder on the page, if it has one: its buttons and condition
- * selects, then the groups the rule was saved with, or one empty group.
+ * Start this build's builders on the page, if it has any.
+ *
+ * Only the builders whose `data-build` names this build: another plugin's
+ * copy of the library, loaded on the same page, starts its own.
  *
  * @param {Function} fetcher apiFetch, or a fake: what the searched fields ask with.
- * @return {Object|null} The builder: its settings, its elements, and `settled()`,
- *                       which resolves once every saved value has been labelled.
+ * @param {string}   handle  The build's handle. This script's own by default.
+ * @return {Object[]} The builders started, each as start() returns it.
  */
-export function init( fetcher ) {
-	const builder = document.querySelector( '.conditions-builder' );
+export function init( fetcher, handle = build ) {
+	return Array.from( document.querySelectorAll( '.conditions-builder' ) )
+		.filter( ( builder ) => belongsTo( builder, handle ) )
+		.map( ( builder ) => start( builder, fetcher, handle ) );
+}
 
-	if ( ! builder ) {
-		return null;
-	}
-
+/**
+ * Start one builder: its buttons and condition selects, then the groups the
+ * rule was saved with, or one empty group.
+ *
+ * @param {Element}  builder The `.conditions-builder`.
+ * @param {Function} fetcher What the searched fields ask with.
+ * @param {string}   handle  The build's handle, whose entry it reads.
+ * @return {Object} The builder: its settings, its elements, and `settled()`,
+ *                  which resolves once every saved value has been labelled.
+ */
+export function start( builder, fetcher, handle ) {
 	const context = {
-		...settings(
-			readConfig(
-				document.querySelector( '.conditions-builder[data-set-id]' )
-			)
-		),
+		...settings( readConfig( builder, handle ) ),
 		builder,
 		container: builder.querySelector( '.condition-groups' ),
 		setId: builder.getAttribute( 'data-set-id' ) || '',

@@ -18,6 +18,7 @@ namespace SugarCommerce\Conditions;
 
 use SugarCommerce\Conditions\Models\MatchResult;
 use SugarCommerce\Conditions\Models\MatchResults;
+use SugarCommerce\Plugin\Build;
 
 /**
  * Class Conditions
@@ -30,11 +31,20 @@ use SugarCommerce\Conditions\Models\MatchResults;
 final class Conditions {
 
 	/**
-	 * The prefix every shared name is built from.
+	 * How many segments this class's own namespace has --
+	 * SugarCommerce\Conditions -- before any prefix. Counted rather than
+	 * written out: Strauss rewrites a namespace it finds in a string.
 	 *
-	 * @var string
+	 * @var int
 	 */
-	private static string $prefix = '';
+	private const int OWN_SEGMENTS = 2;
+
+	/**
+	 * The prefix the plugin chose, in place of the derived one.
+	 *
+	 * @var string|null
+	 */
+	private static ?string $prefix = null;
 
 	/**
 	 * Sources a plugin has handed in for what the library cannot know alone.
@@ -57,24 +67,46 @@ final class Conditions {
 	 *  - REST:   `{prefix}-conditions/v1` (`conditions/v1` with none);
 	 *  - assets: `{prefix}-conditions-admin` (`conditions-admin` with none).
 	 *
+	 * Without it a Strauss-prefixed copy takes its prefix from the namespace
+	 * it was compiled under ({@see self::prefix_for()}), so two copies
+	 * neither of which named itself still come out apart; a plain Composer
+	 * install has none.
+	 *
 	 * Call it before the first register().
 	 *
 	 * @param string $prefix e.g. `myplugin`. Anything but letters, digits and
-	 *                       underscores is dropped.
+	 *                       underscores is dropped. Empty to go back to the
+	 *                       derived prefix.
 	 *
 	 * @return void
 	 */
 	public static function use_prefix( string $prefix ): void {
-		self::$prefix = strtolower( (string) preg_replace( '/[^A-Za-z0-9_]/', '', $prefix ) );
+		$prefix       = strtolower( (string) preg_replace( '/[^A-Za-z0-9_]/', '', $prefix ) );
+		self::$prefix = '' === $prefix ? null : $prefix;
 	}
 
 	/**
-	 * The prefix in use, or '' for none.
+	 * The prefix in use: the one chosen, else this build's own, '' for none.
 	 *
 	 * @return string
 	 */
 	public static function prefix(): string {
-		return self::$prefix;
+		return self::$prefix ?? self::prefix_for( __NAMESPACE__ );
+	}
+
+	/**
+	 * The prefix a build compiled under a namespace has, when none is chosen.
+	 *
+	 * {@see Build::name()}, the family's one rule: '' for this package's own
+	 * namespace, `myplugin` for "MyPlugin\Vendor\SugarCommerce\Conditions".
+	 * Split out so a test can reach the prefixed case.
+	 *
+	 * @param string $under The namespace this class is compiled under.
+	 *
+	 * @return string
+	 */
+	public static function prefix_for( string $under ): string {
+		return str_replace( '-', '_', Build::name( $under, self::OWN_SEGMENTS ) );
 	}
 
 	/**
@@ -85,7 +117,9 @@ final class Conditions {
 	 * @return string e.g. `myplugin_conditions_set_registered`.
 	 */
 	public static function hook( string $name ): string {
-		return ( '' === self::$prefix ? '' : self::$prefix . '_' ) . 'conditions_' . $name;
+		$prefix = self::prefix();
+
+		return ( '' === $prefix ? '' : $prefix . '_' ) . 'conditions_' . $name;
 	}
 
 	/**
@@ -114,7 +148,9 @@ final class Conditions {
 	 * @return string
 	 */
 	private static function slug(): string {
-		return ( '' === self::$prefix ? '' : str_replace( '_', '-', self::$prefix ) . '-' ) . 'conditions';
+		$prefix = self::prefix();
+
+		return ( '' === $prefix ? '' : str_replace( '_', '-', $prefix ) . '-' ) . 'conditions';
 	}
 
 	/** Sets **********************************************************************/
@@ -262,7 +298,7 @@ final class Conditions {
 	 * @return void
 	 */
 	public static function reset(): void {
-		self::$prefix    = '';
+		self::$prefix    = null;
 		self::$providers = [];
 		Registry::reset();
 	}

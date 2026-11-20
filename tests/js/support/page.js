@@ -22,10 +22,17 @@ const select2Source = readFileSync(
 );
 
 /**
+ * The handle of the build editor.php draws: what its builder's `data-build`
+ * names and what its data is keyed by. Set by editorPage().
+ */
+export let build = '';
+
+/**
  * Draw the meta box into the document and hand the script its data.
  *
  * @param {Array} saved The groups the rule was saved with.
- * @return {Object} The set's localized data, as window.sugarConditions holds it.
+ * @return {Object} The set's localized data, as
+ *                  window.SugarCommerceConditions[ build ] holds it.
  */
 export function editorPage( saved = [] ) {
 	const dir = mkdtempSync( join( tmpdir(), 'conditions-' ) );
@@ -33,16 +40,19 @@ export function editorPage( saved = [] ) {
 
 	writeFileSync( file, JSON.stringify( saved ) );
 
-	const { html, config } = JSON.parse(
+	const parsed = JSON.parse(
 		execFileSync( 'php', [ join( here, 'editor.php' ), file ], {
 			encoding: 'utf8',
 		} )
 	);
 
-	document.body.innerHTML = `<form id="post">${ html }</form>`;
-	window.sugarConditions = { discount_rule: config };
+	build = parsed.build;
+	document.body.innerHTML = `<form id="post">${ parsed.html }</form>`;
+	window.SugarCommerceConditions = {
+		[ build ]: { discount_rule: parsed.config },
+	};
 
-	return config;
+	return parsed.config;
 }
 
 /**
