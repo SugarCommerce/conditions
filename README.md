@@ -19,7 +19,8 @@ It leans on two SugarCommerce packages rather than carrying copies:
 sugarcommerce/network reads the patterns in an IP rule (its `Range`: an
 address, `/24`, `203.0.113.*`, `2001:db8:*`, or `a-b`), and
 sugarcommerce/plugin's `Assets` finds where the builder's scripts are
-served from. Both are Strauss-safe, so any plugin can still carry it.
+served from and registers its build. Both are Strauss-safe, so any plugin
+can still carry it.
 
 ## Features
 
@@ -225,6 +226,50 @@ The same ids as before, so rules saved against them keep working. A lookup
 service — ProxyCheck, IPQualityScore, AbuseIPDB — is one more of these, its
 `compare_value` asking the service's client about `$args['ip']`.
 
+## The scripts
+
+The rule builder is plain JavaScript in ES modules (`src/js`), each with one
+job, built by `@wordpress/scripts` into `assets/build/conditions.js` with a
+`conditions.asset.php` naming the WordPress scripts it imports
+(`wp-api-fetch`, `wp-dom-ready`, `wp-i18n`) and a version that changes with
+its contents. `Admin\Assets` registers it through
+`SugarCommerce\Plugin\Assets::register_built_script()` as
+`{prefix}-conditions-admin`, after `{prefix}-conditions-select2`, on a set's
+edit screens only; `…_assets_url` still moves it with the stylesheets.
+
+| Module | Its job |
+|---|---|
+| `builder/builder` | starts the builder: its buttons, its condition selects, the saved groups |
+| `builder/rows` | adding, copying and deleting groups; adding and removing rows |
+| `builder/rule` | a row following its condition: operators, value field, tooltip |
+| `builder/operators` | which operators a condition offers -- `Operators::for_type()`'s answer |
+| `builder/fields` | the value field for each type, and the names the save reads |
+| `builder/tags` | the free-entry fields: what splits entries and what is accepted (tags, IP/CIDR, email patterns) |
+| `builder/search` | the post, term, user and `ajax` pickers' REST requests, and labelling saved values |
+| `builder/selects` | which picker each select becomes |
+| `builder/serialize` | a row read back as a saved rule, for Duplicate |
+| `builder/templates` | a group, a row and an OR copied from the `<template>`s `Admin\Editor` draws |
+| `lib/select2` | the one place Select2 -- and through it jQuery -- is reached |
+| `lib/config`, `lib/dom` | what PHP handed over (`window.sugarConditions[ $set ]`); escaping |
+
+Select2 stays: it is bundled, loaded by its own handle, and it brings jQuery.
+Only `lib/select2` touches it, reading `window.jQuery` when it is wanted --
+without it every select is a plain one and the builder still works -- so
+another picker can replace it by replacing that file. The strings a plugin
+may change through `…_i18n_strings` come from PHP; the few placeholders the
+script writes itself are `__()` in the `sugarcommerce` text domain.
+
+```bash
+npm ci
+npm run build      # assets/build, committed
+npm run start      # rebuild on change
+npm run test:js    # Vitest, in jsdom, against the markup PHP draws
+npm run lint:js
+```
+
+The build's files are what ship. CI builds again and fails when the result
+differs from what was committed.
+
 ## Two plugins on one site
 
 Each plugin bundles its own copy, and the REST routes, hooks and script
@@ -273,6 +318,8 @@ built-in id outside the twelve above are unchanged.
 | `IP::is_match()` (wp-ip-utils) | `SugarCommerce\Network\Range::contains_any( $patterns, $ip )` -- the package's own `Helpers\IP` copy is gone |
 | `Email::matches_any()` (wp-email-utils) | `Helpers\Email::matches_any()` |
 | the assets folder's URL, worked out here | `SugarCommerce\Plugin\Assets::locate()`; `Admin\Assets::url()` and the `…_assets_url` filter are unchanged |
+| `assets/js/conditions.js` (jQuery, `wp-util`'s `wp.template`) | `assets/build/conditions.js`, built from `src/js`; the same handle, `{prefix}-conditions-admin`, and the same `window.sugarConditions` |
+| the `tmpl-condition-group`, `tmpl-condition-row`, `tmpl-group-connector` underscore templates | `<template>` elements with the same ids; the script fills in ids and names |
 
 What is no longer built in, and where it went:
 
@@ -290,6 +337,8 @@ What is no longer built in, and where it went:
 Answers that changed:
 
 * An IP rule matches a from-to range (`203.0.113.1-203.0.113.50`), and an IPv4 address an IPv6 socket reported (`::ffff:203.0.113.9`) against IPv4 patterns. A wildcard needs every part: `10.*` and `2001:db8::*` are not saved (neither ever matched an address).
+* Deleting a group between two others keeps the OR between the two that are left (both went before).
+* An `ajax` condition's callback is asked with `''`, not `null`, when its picker opens before anything is typed, or labels saved values -- a callback typed `string $search` failed there.
 * A REST request is core's `wp_is_serving_rest_request()`; the trash notice is core's `wp_admin_notice()`, with the same markup; the ajax and user-search endpoints read `include` and `role` with `wp_parse_list()`, so spaces separate too and an empty entry is dropped.
 
 ## Requirements

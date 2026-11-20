@@ -22,7 +22,7 @@ use WP_Post;
 /**
  * Class Editor
  *
- * Renders the markup and templates the builder script fills in.
+ * Renders the markup and the templates the builder script copies.
  */
 final class Editor {
 
@@ -80,7 +80,10 @@ final class Editor {
 	}
 
 	/**
-	 * Render JavaScript templates.
+	 * Render the templates the builder copies a group, a row and an OR from.
+	 *
+	 * Plain HTML in `<template>` elements: the script puts in the ids and
+	 * field names, and picks the group's label from the two given here.
 	 *
 	 * @param array $conditions The conditions array.
 	 *
@@ -88,17 +91,12 @@ final class Editor {
 	 */
 	private static function render_templates( array $conditions ): void {
 		?>
-		<!-- Templates for JavaScript -->
-		<script type="text/html" id="tmpl-condition-group">
-			<div class="condition-group" data-group-id="{{ data.id }}">
+		<template id="tmpl-condition-group"
+				data-first-label="<?php esc_attr_e( 'Match all of the following rules', 'sugarcommerce' ); ?>"
+				data-other-label="<?php esc_attr_e( 'Or match all of the following rules', 'sugarcommerce' ); ?>">
+			<div class="condition-group" data-group-id="">
 				<div class="condition-group-header">
-					<span class="group-label">
-						<# if ( data.index === 0 ) { #>
-							<?php esc_html_e( 'Match all of the following rules', 'sugarcommerce' ); ?>
-						<# } else { #>
-							<?php esc_html_e( 'Or match all of the following rules', 'sugarcommerce' ); ?>
-						<# } #>
-					</span>
+					<span class="group-label"></span>
 					<div class="group-actions">
 						<a href="#" class="duplicate-group"><?php esc_html_e( 'Duplicate', 'sugarcommerce' ); ?></a>
 						<a href="#" class="delete-group"><?php esc_html_e( 'Delete', 'sugarcommerce' ); ?></a>
@@ -115,13 +113,12 @@ final class Editor {
 					</button>
 				</div>
 			</div>
-		</script>
+		</template>
 
-		<script type="text/html" id="tmpl-condition-row">
-			<div class="condition-row" data-condition-id="{{ data.id }}">
+		<template id="tmpl-condition-row">
+			<div class="condition-row" data-condition-id="">
 				<div class="condition-fields">
-					<select class="condition-select conditions-condition-select"
-							name="_conditions[{{ data.groupId }}][rules][{{ data.id }}][condition]">
+					<select class="condition-select conditions-condition-select">
 						<option value=""><?php esc_html_e( 'Select condition...', 'sugarcommerce' ); ?></option>
 						<?php
 						// Markup, not text: render_condition_options() escapes
@@ -131,8 +128,7 @@ final class Editor {
 						?>
 					</select>
 
-					<select class="operator-select"
-							name="_conditions[{{ data.groupId }}][rules][{{ data.id }}][operator]" disabled>
+					<select class="operator-select" disabled>
 						<option value=""><?php esc_html_e( 'Select...', 'sugarcommerce' ); ?></option>
 					</select>
 
@@ -153,11 +149,11 @@ final class Editor {
 					</button>
 				</div>
 			</div>
-		</script>
+		</template>
 
-		<script type="text/html" id="tmpl-group-connector">
+		<template id="tmpl-group-connector">
 			<div class="group-connector"><?php esc_html_e( 'OR', 'sugarcommerce' ); ?></div>
-		</script>
+		</template>
 		<?php
 	}
 

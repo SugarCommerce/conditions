@@ -341,8 +341,8 @@ final class ConditionsTest extends TestCase {
 	 */
 	public function test_the_assets_url_is_worked_out_from_the_folder(): void {
 		$this->assertSame(
-			'https://shop.example/wp-content/conditions/assets/js/conditions.js',
-			Assets::url( 'js/conditions.js' )
+			'https://shop.example/wp-content/conditions/assets/build/conditions.js',
+			Assets::url( 'build/conditions.js' )
 		);
 
 		add_filter( Conditions::hook( 'assets_url' ), static fn(): string => 'https://cdn.example/c/' );

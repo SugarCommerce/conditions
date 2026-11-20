@@ -37,7 +37,9 @@ final class Ajax {
 	public static function handle( WP_REST_Request $request ) {
 		$set_id       = $request->get_param( 'set_id' );
 		$condition_id = $request->get_param( 'condition_id' );
-		$search       = $request->get_param( 'search' );
+		// A string even when none was sent: the picker opens with an empty
+		// search, and a callback typed `string $search` met a null before.
+		$search       = (string) $request->get_param( 'search' );
 		$include      = $request->get_param( 'include' );
 
 		// Get the condition configuration

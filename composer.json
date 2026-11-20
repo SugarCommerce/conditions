@@ -85,6 +85,7 @@
     "test": "phpunit",
     "lint": "phpcs",
     "format": "phpcbf --standard=phpcs-format.xml.dist",
-    "format:check": "phpcs --standard=phpcs-format.xml.dist"
+    "format:check": "phpcs --standard=phpcs-format.xml.dist",
+    "test:js": "npm run test:js"
   }
 }

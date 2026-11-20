@@ -121,4 +121,35 @@ final class CoreTest extends TestCase {
 
 		$this->assertSame( [ '7', '8', '9' ], $asked );
 	}
+
+	/**
+	 * A picker opened before anything is typed sends no search: the callback
+	 * is asked with an empty string, as its type says, not a null.
+	 */
+	public function test_the_ajax_endpoint_searches_for_nothing_as_an_empty_string(): void {
+		$asked = [];
+
+		Conditions::register(
+			'fee_rule',
+			[
+				'conditions' => [
+					'customer' => [
+						'type' => 'ajax',
+						'ajax' => static function ( string $search, ?array $ids = null ) use ( &$asked ): array {
+							$asked[] = [ $search, $ids ];
+
+							return [ [ 'value' => 'a@b.c', 'label' => 'Ann' ] ];
+						},
+					],
+				],
+			]
+		);
+
+		$opened = Ajax::handle( new WP_REST_Request( [ 'set_id' => 'fee_rule', 'condition_id' => 'customer' ] ) );
+		$label  = Ajax::handle( new WP_REST_Request( [ 'set_id' => 'fee_rule', 'condition_id' => 'customer', 'include' => 'a@b.c' ] ) );
+
+		$this->assertSame( [ [ 'value' => 'a@b.c', 'label' => 'Ann' ] ], $opened );
+		$this->assertSame( $opened, $label );
+		$this->assertSame( [ [ '', null ], [ '', [ 'a@b.c' ] ] ], $asked );
+	}
 }

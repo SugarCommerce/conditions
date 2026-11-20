@@ -53,6 +53,7 @@ function wpc_reset(): void {
 	$GLOBALS['wpc_users']      = [];
 	$GLOBALS['wpc_post_by_id'] = [];
 	$GLOBALS['wpc_timezone']   = 'UTC';
+	$GLOBALS['wpc_scripts']    = [];
 }
 
 wpc_reset();
@@ -332,6 +333,46 @@ function wp_enqueue_script( ...$args ) {
 
 function wp_add_inline_script( ...$args ) {
 	wpc_record( __FUNCTION__, $args );
+}
+
+/**
+ * Registered as core keeps them, `src` and all, so a test can read back
+ * where a script will be served from.
+ */
+function wp_register_script( $handle, $src, $deps = [], $ver = false, $args = [] ) {
+	wpc_record( __FUNCTION__, func_get_args() );
+
+	$GLOBALS['wpc_scripts'][ $handle ] = (object) [
+		'handle' => $handle,
+		'src'    => $src,
+		'deps'   => $deps,
+		'ver'    => $ver,
+		'args'   => $args,
+	];
+
+	return true;
+}
+
+function wp_scripts() {
+	return (object) [ 'registered' => $GLOBALS['wpc_scripts'] ];
+}
+
+function wp_set_script_translations( ...$args ) {
+	wpc_record( __FUNCTION__, $args );
+
+	return true;
+}
+
+function esc_attr_e( $text, $domain = null ) {
+	echo htmlspecialchars( (string) $text, ENT_QUOTES );
+}
+
+function esc_html_e( $text, $domain = null ) {
+	echo htmlspecialchars( (string) $text, ENT_QUOTES );
+}
+
+function wp_nonce_field( $action = -1, $name = '_wpnonce' ) {
+	echo '<input type="hidden" name="' . htmlspecialchars( (string) $name, ENT_QUOTES ) . '" value="nonce">';
 }
 
 /*

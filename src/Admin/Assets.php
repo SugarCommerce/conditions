@@ -98,7 +98,15 @@ final class Assets {
 		wp_enqueue_script( $select2, self::url( 'js/select2.min.js' ), [ 'jquery' ], self::SELECT2_VERSION, true );
 
 		wp_enqueue_style( $admin, self::url( 'css/conditions.css' ), [ $select2 ], self::version( 'css/conditions.css' ) );
-		wp_enqueue_script( $admin, self::url( 'js/conditions.js' ), [ 'jquery', $select2, 'wp-util' ], self::version( 'js/conditions.js' ), true );
+
+		// The builder, from its build: its manifest names what it imports
+		// (wp-api-fetch for the searched fields, wp-dom-ready, wp-i18n). Select2
+		// is the one thing it needs without importing, and it brings jQuery.
+		if ( ! self::register_builder( $admin, [ $select2 ] ) ) {
+			return;
+		}
+
+		wp_enqueue_script( $admin );
 
 		// Keyed by set rather than one global, so whichever plugin's copy of
 		// this library drew the screen, the script reads that copy's data.
@@ -111,6 +119,50 @@ final class Assets {
 			),
 			'before'
 		);
+	}
+
+	/**
+	 * Register the builder's script, `assets/build/conditions.js`.
+	 *
+	 * Plugin\Assets registers it from its manifest. `{prefix}_conditions_assets_url`
+	 * still has the last word on where it is served from, as it has for the
+	 * stylesheets and Select2: a folder moved to a CDN takes the script with
+	 * it, and a folder Plugin\Assets cannot see at all is served from wherever
+	 * the filter says, with the manifest read from disk.
+	 *
+	 * @param string   $handle The handle.
+	 * @param string[] $deps   Handles it needs that it does not import.
+	 *
+	 * @return bool False when the script was never built.
+	 */
+	private static function register_builder( string $handle, array $deps ): bool {
+		$file = 'build/conditions.js';
+		$url  = self::url( $file );
+
+		if ( PackageAssets::register_built_script( $handle, __FILE__, 'conditions', $deps ) ) {
+			if ( $url !== PackageAssets::url( __FILE__, $file ) ) {
+				wp_scripts()->registered[ $handle ]->src = $url;
+			}
+
+			return true;
+		}
+
+		$manifest = self::dir() . '/build/conditions.asset.php';
+
+		if ( ! is_readable( $manifest ) ) {
+			return false;
+		}
+
+		$asset        = require $manifest;
+		$dependencies = array_map( 'strval', (array) ( $asset['dependencies'] ?? [] ) );
+
+		wp_register_script( $handle, $url, array_merge( $dependencies, $deps ), (string) ( $asset['version'] ?? '' ), true );
+
+		if ( in_array( 'wp-i18n', $dependencies, true ) ) {
+			wp_set_script_translations( $handle, 'sugarcommerce' );
+		}
+
+		return true;
 	}
 
 	/**
@@ -220,7 +272,7 @@ final class Assets {
 	 * `{prefix}_conditions_assets_url` overrides the folder's URL for a setup
 	 * Plugin\Assets cannot see, such as a CDN.
 	 *
-	 * @param string $file e.g. `js/conditions.js`.
+	 * @param string $file e.g. `build/conditions.js`.
 	 *
 	 * @return string
 	 */
@@ -233,7 +285,7 @@ final class Assets {
 	/**
 	 * A file's version: when it last changed, so a new copy is fetched.
 	 *
-	 * @param string $file e.g. `js/conditions.js`.
+	 * @param string $file e.g. `css/conditions.css`.
 	 *
 	 * @return string
 	 */
