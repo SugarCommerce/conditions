@@ -9,8 +9,8 @@ import {
 	groupRules,
 	rowValue,
 	selectValue,
-} from '../../src/js/builder/serialize';
-import { valueField } from '../../src/js/builder/fields';
+} from '../../assets/js/builder/serialize';
+import { valueField } from '../../assets/js/builder/fields';
 
 /**
  * A row holding a value field drawn for a condition.

@@ -30,7 +30,7 @@ final class Email {
 	 *
 	 * @var string[]
 	 */
-	private const FREEMAIL = [
+	private const array FREEMAIL = [
 		'gmail.com',
 		'googlemail.com',
 		'yahoo.com',
@@ -57,7 +57,7 @@ final class Email {
 	 *
 	 * @var string[]
 	 */
-	private const FREEMAIL_TYPOS = [
+	private const array FREEMAIL_TYPOS = [
 		'gmial.com',
 		'gmali.com',
 		'gmai.com',

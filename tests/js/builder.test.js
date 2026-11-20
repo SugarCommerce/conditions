@@ -6,7 +6,7 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { init, savedGroups } from '../../src/js/builder/builder';
+import { init, savedGroups } from '../../assets/js/builder/builder';
 import {
 	editorPage,
 	fakeRoutes,

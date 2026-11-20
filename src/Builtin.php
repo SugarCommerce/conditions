@@ -30,7 +30,7 @@ final class Builtin {
 	 *
 	 * @var array<int, class-string>
 	 */
-	private const PACKS = [
+	private const array PACKS = [
 		Builtin\DateTime::class,
 		Builtin\User::class,
 		Builtin\Post::class,

@@ -68,7 +68,12 @@ final class AssetsTest extends TestCase {
 		$this->assertMatchesRegularExpression( '/^[a-f0-9]{20}$/', (string) $manifest['version'] );
 
 		$this->assertNull( PackageAssets::built_manifest( realpath( self::ASSETS_FILE ), 'nothing' ) );
-		$this->assertFileDoesNotExist( dirname( self::ASSETS_FILE, 3 ) . '/assets/js/conditions.js', 'The jQuery script is still there.' );
+		// assets/js holds the module the build is made from now, not the old
+		// jQuery script that was enqueued as it was.
+		$source = (string) file_get_contents( dirname( self::ASSETS_FILE, 3 ) . '/assets/js/conditions.js' );
+
+		$this->assertStringContainsString( "import apiFetch from '@wordpress/api-fetch';", $source );
+		$this->assertStringNotContainsString( 'jQuery', $source );
 	}
 
 	/**

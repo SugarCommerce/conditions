@@ -6,6 +6,9 @@ const wordpress = require( '@wordpress/scripts/config/eslint.config.cjs' );
 const globals = require( 'globals' );
 
 module.exports = [
+	// Select2, shipped as its authors built it, beside the sources.
+	{ ignores: [ 'assets/js/select2.min.js' ] },
+
 	...wordpress,
 
 	// The tests run in jsdom, under Vitest.

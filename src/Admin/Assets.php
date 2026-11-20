@@ -32,7 +32,7 @@ final class Assets {
 	 *
 	 * @var string
 	 */
-	private const SELECT2_VERSION = '4.1.0';
+	private const string SELECT2_VERSION = '4.1.0';
 
 	/**
 	 * Registered condition set IDs.

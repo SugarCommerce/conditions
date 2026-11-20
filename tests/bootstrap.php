@@ -616,3 +616,77 @@ class WP_User {
 	public function __construct( public int $ID = 0, public array $allcaps = [] ) {
 	}
 }
+
+if ( ! function_exists( 'get_users' ) ) {
+	/**
+	 * Users for a query: none, with the query kept for a test to read.
+	 *
+	 * @param array $args The query.
+	 *
+	 * @return array
+	 */
+	function get_users( $args = [] ) {
+		$GLOBALS['wpc_user_query'] = $args;
+
+		return [];
+	}
+}
+
+if ( ! function_exists( 'wp_parse_id_list' ) ) {
+	function wp_parse_id_list( $input_list ) {
+		return array_values( array_unique( array_map( 'absint', wp_parse_list( $input_list ) ) ) );
+	}
+}
+
+if ( ! class_exists( 'WP_Error' ) ) {
+	/**
+	 * Core's error: a code, a message and data.
+	 */
+	class WP_Error {
+
+		/**
+		 * An error.
+		 *
+		 * @param string $code    The code.
+		 * @param string $message The message.
+		 * @param mixed  $data    The data.
+		 */
+		public function __construct( public string $code = '', public string $message = '', public mixed $data = null ) {
+		}
+
+		/**
+		 * The data.
+		 *
+		 * @return mixed
+		 */
+		public function get_error_data() {
+			return $this->data;
+		}
+	}
+}
+
+if ( ! class_exists( 'WP_REST_Response' ) ) {
+	/**
+	 * Core's response: data and a status.
+	 */
+	class WP_REST_Response {
+
+		/**
+		 * A response.
+		 *
+		 * @param mixed $data   The data.
+		 * @param int   $status The status.
+		 */
+		public function __construct( public mixed $data = null, public int $status = 200 ) {
+		}
+
+		/**
+		 * The data.
+		 *
+		 * @return mixed
+		 */
+		public function get_data() {
+			return $this->data;
+		}
+	}
+}

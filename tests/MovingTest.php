@@ -1,6 +1,6 @@
 <?php
 /**
- * The README's "Moving from arraypress/wp-conditions" table.
+ * Saved rules keep their conditions: the built-in ids that were there before.
  *
  * @package SugarCommerce\Conditions
  */

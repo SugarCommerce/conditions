@@ -228,7 +228,7 @@ service — ProxyCheck, IPQualityScore, AbuseIPDB — is one more of these, its
 
 ## The scripts
 
-The rule builder is plain JavaScript in ES modules (`src/js`), each with one
+The rule builder is plain JavaScript in ES modules (`assets/js`), each with one
 job, built by `@wordpress/scripts` into `assets/build/conditions.js` with a
 `conditions.asset.php` naming the WordPress scripts it imports
 (`wp-api-fetch`, `wp-dom-ready`, `wp-i18n`) and a version that changes with
@@ -287,59 +287,42 @@ hooks named `myshop_conditions_*`, handles `myshop-conditions-*`.
 | `{set}_save_conditions`, `{set}_conditions_saved` | filter and action, saving a rule |
 | `{set}_labels`, `{set}_metabox_title`, `{set}_post_updated_messages` | filters, the screens |
 
-## Moving from arraypress/wp-conditions
+## Security
 
-Saved rules need nothing: the post types, the `_conditions` meta and every
-built-in id outside the twelve above are unchanged.
+* Editing rules you may not: a set's rules are saved only with its nonce and
+  its capability, and its pickers' routes ask a capability of a set whose
+  editor could have asked (`{prefix}_conditions_rest_permission` has the
+  last word).
+* Searching more than a picker offers: post, term and user pickers search
+  only the post types, taxonomies and roles a registered condition names;
+  leaving the role out searches those roles, not every account.
+* Learning who is on the site: a user picker matches email addresses only
+  for someone who may `list_users`, as core's users route does; it answers
+  with display names, never addresses.
+* Unpublished titles: the post picker lists published posts only.
+* A spoofed visitor address: the IP is `REMOTE_ADDR` unless a provider that
+  knows the site's proxies says otherwise, and a CDN's country header is not
+  read on its own.
+* A broken pattern from a rule: a regex that will not compile is refused when
+  it is saved and is "no match" when checked, never a warning on a customer's
+  page.
+* Leaking internals: a picker callback that throws answers that the search
+  could not be completed; its message only under `WP_DEBUG`.
 
-| Was | Now |
-|---|---|
-| `register_conditions( $set, $args )` | `Conditions::register( $set, $args )` |
-| `register_condition( $set, $id, $args )` | `Conditions::add( $set, $id, $args )` |
-| `check_conditions( $set, $args, $query )` | `Conditions::check( $set, $args, $query )` |
-| `check_all_conditions( $set, $args, $query )` | `Conditions::check_all( $set, $args, $query )` |
-| `new Matcher( $set, $args )->matches( $groups )` | the same, or `Conditions::matches( $set, $groups, $args )` |
-| `ArrayPress\Conditions\Conditions::get() / get_all() / get_core()` | `Builtin::get() / get_all()` |
-| `Conditions\Core\{DateTime, User, Post, Request, Context, Email, Geo, Velocity, Payment}` | `Builtin\{...}` |
-| `Models\MatchResult`, `Models\MatchResultCollection` | `MatchResult`, `MatchResults` |
-| `Abstracts\Condition`, `Comparators\Comparator` | `Condition`, `Comparator` |
-| `Registration\{PostType, MetaBox}`, `Admin\MetaBoxRenderer` | `Admin\{PostType, MetaBox}`, `Admin\Editor` |
-| `Registration\RestApi`, `REST\{Posts, Terms, Users, Ajax}` | `Rest\Routes`, `Rest\{...}` |
-| `Registry::get_rest_api_instance()` | `Registry::get_routes_instance()` |
-| `Helpers\Velocity::count_orders_by_ip( $args )` and the other counters | `Velocity::count( 'orders_by_ip', $args )` |
-| `Helpers\Velocity::to_interval()`, `compute_card_fingerprint()`, `resolve_window()` | unchanged |
-| `wp_conditions_velocity_{kind}` filters | `{prefix}_conditions_velocity_{kind}`, each handed `$args` last |
-| `conditions_set_registered`, `conditions_localized_data`, `conditions_i18n_strings` | `{prefix}_conditions_*` |
-| `conditions_rest_capability` filter (a capability) | `{prefix}_conditions_rest_permission` (a bool); each set's own capability is checked |
-| `Options\Network::get_request_methods()` | `Options\Request::get_methods()` |
-| `AcceptLanguage::get_common_languages()` | `Options\Request::get_languages()` |
-| the `conditionsData` script global | `window.sugarConditions[ $set ]` |
-| REST `conditions/v1` | `Conditions::rest_namespace()` |
-| `IP::is_match()` (wp-ip-utils) | `SugarCommerce\Network\Range::contains_any( $patterns, $ip )` -- the package's own `Helpers\IP` copy is gone |
-| `Email::matches_any()` (wp-email-utils) | `Helpers\Email::matches_any()` |
-| the assets folder's URL, worked out here | `SugarCommerce\Plugin\Assets::locate()`; `Admin\Assets::url()` and the `…_assets_url` filter are unchanged |
-| `assets/js/conditions.js` (jQuery, `wp-util`'s `wp.template`) | `assets/build/conditions.js`, built from `src/js`; the same handle, `{prefix}-conditions-admin`, and the same `window.sugarConditions` |
-| the `tmpl-condition-group`, `tmpl-condition-row`, `tmpl-group-connector` underscore templates | `<template>` elements with the same ids; the script fills in ids and names |
+## Source layout
 
-What is no longer built in, and where it went:
-
-| Was | Now |
-|---|---|
-| `Conditions\EDD\*`, `Integrations\EDD\*` | the EDD plugin's own registrations — a configuration or a Condition class each, as above |
-| `Conditions\WooCommerce\*`, `Integrations\WooCommerce\*` | the same, in the WooCommerce plugin |
-| `Conditions\Services\*`, `Clients\*` (ProxyCheck, IPQualityScore, IPInfo, AbuseIPDB) | a registration around the service's client |
-| the twelve visitor conditions above, `Options\UserAgents` | registered from sugarcommerce/network |
-| the EDD/WooCommerce velocity counts, the live-cart product lookup | a velocity filter; pass `product_ids` or `cart_product_ids` |
-| `Helpers\CartClock`, `Helpers\Address` | the shop plugin, beside its checkout conditions |
-| the country header read through Cloudflare's ranges | the `country` provider |
-| `Helpers\Geo::get_continent_options()` | sugarcommerce/geo |
-
-Answers that changed:
-
-* An IP rule matches a from-to range (`203.0.113.1-203.0.113.50`), and an IPv4 address an IPv6 socket reported (`::ffff:203.0.113.9`) against IPv4 patterns. A wildcard needs every part: `10.*` and `2001:db8::*` are not saved (neither ever matched an address).
-* Deleting a group between two others keeps the OR between the two that are left (both went before).
-* An `ajax` condition's callback is asked with `''`, not `null`, when its picker opens before anything is typed, or labels saved values -- a callback typed `string $search` failed there.
-* A REST request is core's `wp_is_serving_rest_request()`; the trash notice is core's `wp_admin_notice()`, with the same markup; the ajax and user-search endpoints read `include` and `role` with `wp_parse_list()`, so spaces separate too and an empty entry is dropped.
+* `src/Conditions.php` (configuration and hooks), `Registry.php` (sets and
+  conditions, with `src/Traits/Registry/Registration.php`), `Matcher.php`,
+  `Comparator.php`, `Operators.php`, `Condition.php`, `MatchResult(s).php`.
+* `src/Builtin/` (the conditions that ship), `src/Helpers/` (what they read:
+  the request -- with `src/Traits/Helpers/Request/` for the referrer and the
+  user agent -- the user, the post, dates, email, geo, velocity),
+  `src/Options/` (choices for the builder's fields).
+* `src/Admin/` (the rule post type, its meta box, the builder, sanitizing),
+  `src/Rest/` (the pickers' routes).
+* `src/` is PHP only. The builder's sources are in `assets/js/`, built to
+  `assets/build/`; Select2 ships beside them as `assets/js/select2.min.js`;
+  the styles are in `assets/css/`.
 
 ## Requirements
 

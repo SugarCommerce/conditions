@@ -20,7 +20,7 @@
 # Continuous integration
 /.github export-ignore
 
-# The scripts' toolchain. The sources (src/js) and the build (assets/build)
+# The scripts' toolchain. The sources (assets/js) and the build (assets/build)
 # ship; what builds and tests them does not.
 /node_modules export-ignore
 /package-lock.json export-ignore
@@ -53,3 +53,4 @@
 # through these same rules -- without this, a plugin built from a local clone
 # copies the library's phpunit and phpcs into its vendor-prefixed folder.
 /vendor export-ignore
+/.prettierignore export-ignore

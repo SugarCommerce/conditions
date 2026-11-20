@@ -42,7 +42,7 @@ final class Velocity {
 	 *
 	 * @var array<string, string>
 	 */
-	public const KINDS = [
+	public const array KINDS = [
 		'orders_by_ip'                       => 'ip',
 		'orders_by_email'                    => 'email',
 		'same_product_orders_by_ip'          => 'ip',

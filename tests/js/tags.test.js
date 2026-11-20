@@ -11,7 +11,7 @@ import {
 	isEmailPattern,
 	isIpPattern,
 	modeOf,
-} from '../../src/js/builder/tags';
+} from '../../assets/js/builder/tags';
 
 describe( 'IP addresses and ranges', () => {
 	test.each( [

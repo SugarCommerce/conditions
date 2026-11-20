@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { asList, optionList, valueField } from '../../src/js/builder/fields';
+import { asList, optionList, valueField } from '../../assets/js/builder/fields';
 
 const i18n = { selectValue: 'Select...', selectCondition: 'Pick one' };
 const NAME = '_conditions[g1][rules][r1][value]';

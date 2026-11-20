@@ -64,12 +64,22 @@ final class Users {
 			}
 
 			$args['role__in'] = $roles;
+		} elseif ( [] !== Registry::allowed_roles() ) {
+			// No role asked for is every role the pickers may search, not
+			// every account: without this, leaving the role out searched
+			// administrators on a picker limited to customers.
+			$args['role__in'] = Registry::allowed_roles();
 		}
 
 		// Search mode
 		if ( ! empty( $search ) ) {
 			$args['search']         = '*' . $search . '*';
-			$args['search_columns'] = [ 'user_login', 'user_email', 'display_name' ];
+			// Email addresses only for someone who may list users, as core's
+			// users route: anyone else searching `@example.com` would learn
+			// whose addresses are on the site.
+			$args['search_columns'] = current_user_can( 'list_users' )
+				? [ 'user_login', 'user_email', 'display_name' ]
+				: [ 'user_login', 'display_name' ];
 		} elseif ( ! empty( $include ) ) {
 			// Lookup mode: resolve specific IDs back to labels.
 			$args['include'] = wp_parse_id_list( $include );

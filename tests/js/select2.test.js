@@ -12,8 +12,8 @@ import {
 	isEnhanced,
 	onChange,
 	refresh,
-} from '../../src/js/lib/select2';
-import { on } from '../../src/js/lib/dom';
+} from '../../assets/js/lib/select2';
+import { on } from '../../assets/js/lib/dom';
 import { tick, withoutJQuery, withSelect2 } from './support/page';
 
 const select = ( markup = '<option value="a">A</option>' ) => {

@@ -15,7 +15,7 @@ import {
 	searchUrl,
 	sourceOf,
 	toResults,
-} from '../../src/js/builder/search';
+} from '../../assets/js/builder/search';
 
 const REST = 'https://shop.example/wp-json/shop-conditions/v1';
 

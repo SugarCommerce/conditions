@@ -16,6 +16,8 @@ declare( strict_types=1 );
 namespace SugarCommerce\Conditions\Helpers;
 
 use SugarCommerce\Conditions\Conditions;
+use SugarCommerce\Conditions\Traits\Helpers\Request\Referrer;
+use SugarCommerce\Conditions\Traits\Helpers\Request\UserAgent;
 use SugarCommerce\Network\IP;
 
 /**
@@ -27,12 +29,15 @@ use SugarCommerce\Network\IP;
  */
 final class Request {
 
+	use Referrer;
+	use UserAgent;
+
 	/**
 	 * Two-label endings where the registrable domain is three labels.
 	 *
 	 * @var string[]
 	 */
-	private const COMPOUND_SUFFIXES = [
+	private const array COMPOUND_SUFFIXES = [
 		'co.uk',
 		'org.uk',
 		'me.uk',
@@ -95,7 +100,7 @@ final class Request {
 	 *
 	 * @var string[]
 	 */
-	public const UTM_PARAMETERS = [ 'source', 'medium', 'campaign', 'term', 'content' ];
+	public const array UTM_PARAMETERS = [ 'source', 'medium', 'campaign', 'term', 'content' ];
 
 	/**
 	 * Read a request value, unslashed and cleaned of control characters.
@@ -365,221 +370,5 @@ final class Request {
 
 	/** The referrer **************************************************************/
 
-	/**
-	 * The referrer URL, when there is one and it is a URL.
-	 *
-	 * @param array $args The condition arguments. `referrer_url` overrides.
-	 *
-	 * @return string
-	 */
-	public static function get_referrer( array $args = [] ): string {
-		if ( isset( $args['referrer_url'] ) && is_scalar( $args['referrer_url'] ) ) {
-			return (string) $args['referrer_url'];
-		}
-
-		if ( ! isset( $_SERVER['HTTP_REFERER'] ) || ! is_string( $_SERVER['HTTP_REFERER'] ) ) {
-			return '';
-		}
-
-		// esc_url_raw drops schemes that are not http(s) -- a javascript: URL
-		// is not a referrer anyone should compare against.
-		$url = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
-
-		return false !== filter_var( $url, FILTER_VALIDATE_URL ) ? $url : '';
-	}
-
-	/**
-	 * The referrer's host, lower-cased.
-	 *
-	 * @param array $args The condition arguments.
-	 *
-	 * @return string
-	 */
-	public static function get_referrer_host( array $args = [] ): string {
-		$host = wp_parse_url( self::get_referrer( $args ), PHP_URL_HOST );
-
-		return is_string( $host ) ? strtolower( $host ) : '';
-	}
-
-	/**
-	 * The referrer's registrable domain: `news.bbc.co.uk` is `bbc.co.uk`.
-	 *
-	 * @param array $args The condition arguments. `referrer_domain` overrides.
-	 *
-	 * @return string
-	 */
-	public static function get_referrer_domain( array $args = [] ): string {
-		if ( isset( $args['referrer_domain'] ) && is_scalar( $args['referrer_domain'] ) ) {
-			return (string) $args['referrer_domain'];
-		}
-
-		return self::root_domain( self::get_referrer_host( $args ) );
-	}
-
-	/**
-	 * Whether there is a referrer at all.
-	 *
-	 * @param array $args The condition arguments. `has_referrer` overrides.
-	 *
-	 * @return bool
-	 */
-	public static function has_referrer( array $args = [] ): bool {
-		return (bool) ( $args['has_referrer'] ?? ( '' !== self::get_referrer( $args ) ) );
-	}
-
-	/**
-	 * Whether the referrer is another site.
-	 *
-	 * @param array $args The condition arguments. `is_external_referrer` overrides.
-	 *
-	 * @return bool
-	 */
-	public static function is_external_referrer( array $args = [] ): bool {
-		if ( isset( $args['is_external_referrer'] ) ) {
-			return (bool) $args['is_external_referrer'];
-		}
-
-		$host = self::get_referrer_host( $args );
-		$site = wp_parse_url( (string) get_option( 'siteurl' ), PHP_URL_HOST );
-
-		return '' !== $host && $host !== strtolower( (string) $site );
-	}
-
-	/**
-	 * A host's registrable domain, without `www.`.
-	 *
-	 * Taking the last two labels gives `co.uk` for every site in Britain; where
-	 * the last two are a known compound ending, take three.
-	 *
-	 * @param string $host The host.
-	 *
-	 * @return string
-	 */
-	public static function root_domain( string $host ): string {
-		$host  = (string) preg_replace( '/^www\./', '', strtolower( trim( $host, '. ' ) ) );
-		$parts = explode( '.', $host );
-		$count = count( $parts );
-
-		if ( $count < 3 ) {
-			return $host;
-		}
-
-		$suffix = $parts[ $count - 2 ] . '.' . $parts[ $count - 1 ];
-
-		return in_array( $suffix, self::COMPOUND_SUFFIXES, true )
-			? $parts[ $count - 3 ] . '.' . $suffix
-			: $suffix;
-	}
-
 	/** The user agent ************************************************************/
-
-	/**
-	 * Get the raw user-agent string.
-	 *
-	 * @param array $args The condition arguments.
-	 *
-	 * @return string
-	 */
-	public static function get_user_agent( array $args = [] ): string {
-		if ( isset( $args['user_agent'] ) ) {
-			return (string) $args['user_agent'];
-		}
-
-		return self::read( $_SERVER, 'HTTP_USER_AGENT' );
-	}
-
-	/**
-	 * Whether the user-agent header is missing or empty.
-	 *
-	 * Legitimate browsers always send one. Empty UAs are usually scripts.
-	 *
-	 * @param array $args The condition arguments.
-	 *
-	 * @return bool
-	 */
-	public static function is_user_agent_empty( array $args = [] ): bool {
-		return '' === trim( self::get_user_agent( $args ) );
-	}
-
-	/**
-	 * Whether the user-agent looks like a headless browser or automation tool.
-	 *
-	 * Detects HeadlessChrome, PhantomJS, Selenium, Puppeteer, Playwright,
-	 * Cypress, Nightmare, and similar automation framework signatures.
-	 *
-	 * @param array $args The condition arguments.
-	 *
-	 * @return bool
-	 */
-	public static function is_user_agent_headless( array $args = [] ): bool {
-		$ua = self::get_user_agent( $args );
-
-		if ( '' === $ua ) {
-			return false;
-		}
-
-		$signatures = [
-			'HeadlessChrome',
-			'PhantomJS',
-			'SlimerJS',
-			'Selenium',
-			'WebDriver',
-			'puppeteer',
-			'Playwright',
-			'Cypress',
-			'Nightmare',
-			'jsdom',
-			'Lighthouse',
-		];
-
-		foreach ( $signatures as $sig ) {
-			if ( false !== stripos( $ua, $sig ) ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Whether the user-agent advertises an outdated browser version.
-	 *
-	 * Heuristic only — version thresholds were chosen to flag genuinely
-	 * abandoned releases without snagging modern enterprise builds.
-	 *
-	 * @param array $args The condition arguments.
-	 *
-	 * @return bool
-	 */
-	public static function is_user_agent_outdated_browser( array $args = [] ): bool {
-		$ua = self::get_user_agent( $args );
-
-		if ( '' === $ua ) {
-			return false;
-		}
-
-		// Internet Explorer (any version is now outdated).
-		if ( preg_match( '/MSIE \d|Trident\//i', $ua ) ) {
-			return true;
-		}
-
-		// Chrome < 90. Edge and other Chromium browsers advertise Chrome too --
-		// only match when there is no Edg/OPR/YaBrowser token alongside.
-		if ( preg_match( '/Chrome\/(\d+)/i', $ua, $m ) && (int) $m[1] < 90
-			&& ! preg_match( '/Edg(e|A|iOS)?\/|OPR\/|YaBrowser\//i', $ua ) ) {
-			return true;
-		}
-
-		// Firefox < 78.
-		if ( preg_match( '/Firefox\/(\d+)/i', $ua, $m ) && (int) $m[1] < 78 ) {
-			return true;
-		}
-
-		// Safari < 13 (read the WebKit-style version token). Not on Android
-		// or alongside a Chrome token: an Android WebView and every in-app
-		// browser advertise "Version/4.0 ... Chrome/124 ... Safari", which is
-		// not an old Safari, it is a current Chrome.
-		return ! preg_match( '/Chrome\/|CriOS\/|Android/i', $ua )
-			&& preg_match( '/Version\/(\d+).*Safari/i', $ua, $m ) && (int) $m[1] < 13;
-	}
 }

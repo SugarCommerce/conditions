@@ -61,6 +61,7 @@ class MatchResults implements Countable, IteratorAggregate {
 	 *
 	 * @return int
 	 */
+	#[\Override]
 	public function count(): int {
 		return count( $this->results );
 	}
@@ -143,6 +144,7 @@ class MatchResults implements Countable, IteratorAggregate {
 	 *
 	 * @return Traversable
 	 */
+	#[\Override]
 	public function getIterator(): Traversable {
 		return new ArrayIterator( $this->results );
 	}

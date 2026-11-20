@@ -13,7 +13,7 @@ import {
 	fillOperators,
 	listFor,
 	operatorsFor,
-} from '../../src/js/builder/operators';
+} from '../../assets/js/builder/operators';
 
 const LISTS = {
 	number: { '==': 'is', '>': 'more than' },

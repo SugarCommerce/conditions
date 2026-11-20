@@ -50,7 +50,7 @@ final class Matcher {
 	 *
 	 * @var array
 	 */
-	private const DEFAULT_QUERY_ARGS = [
+	private const array DEFAULT_QUERY_ARGS = [
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		// The id as a tie-breaker. Every rule has a menu_order of nought until

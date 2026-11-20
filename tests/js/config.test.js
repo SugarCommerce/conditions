@@ -4,8 +4,8 @@
 
 import { afterEach, expect, test } from 'vitest';
 
-import { readConfig, settings } from '../../src/js/lib/config';
-import { escapeHtml, html, raw } from '../../src/js/lib/dom';
+import { readConfig, settings } from '../../assets/js/lib/config';
+import { escapeHtml, html, raw } from '../../assets/js/lib/dom';
 
 afterEach( () => {
 	delete window.sugarConditions;
